@@ -28,7 +28,7 @@ LiveTrainExtension/
 ## 3. Modules
 
 ### 3.1 LiveTrainExtension.js
-* **Status**: Voltooid - Geïntegreerd met trainDataService, selectiemogelijkheden en mapRenderer
+* **Status**: Voltooid - Geïntegreerd met trainDataService, selectiemogelijkheden, mapRenderer, en trainVisualizer
 * **Bestandsnaam**: LiveTrainExtension.js
 * **Functionaliteit**: Hoofdmodule die de extensie initialiseert en integreert met Qlik Sense
 * **Belangrijkste functies**:
@@ -37,13 +37,19 @@ LiveTrainExtension/
       * element (HTMLElement): DOM element waar de visualisatie in geplaatst wordt
       * layout (Object): Layout configuratie van Qlik Sense
     * Return waarde: Belofte die wordt opgelost wanneer het tekenen is voltooid
-    * Afhankelijkheden: trainDataService.js, apiConfig.js, mapRenderer.js
+    * Afhankelijkheden: trainDataService.js, apiConfig.js, mapRenderer.js, trainVisualizer.js
   * `initMap($element, layout)`: 
     * Parameters: 
       * $element (jQuery): jQuery element met de extensie
       * layout (Object): Layout object met configuratie
     * Return waarde: Geen
     * Afhankelijkheden: mapRenderer.js
+  * `updateTrainVisualization(trainData, selectedTrainIds)`:
+    * Parameters:
+      * trainData (Array): Array met treingegevens
+      * selectedTrainIds (Array): Array met geselecteerde treinnummers
+    * Return waarde: Geen
+    * Afhankelijkheden: mapRenderer.js, trainVisualizer.js
   * `refreshTrainData(trainNumbers, $element)`: 
     * Parameters: 
       * trainNumbers (Array): Lijst met treinnummers om te filteren
@@ -53,7 +59,7 @@ LiveTrainExtension/
   * `controller()`: 
     * Parameters: Geen
     * Return waarde: Controller object
-    * Afhankelijkheden: trainDataService.js, apiConfig.js, mapRenderer.js
+    * Afhankelijkheden: trainDataService.js, apiConfig.js, mapRenderer.js, trainVisualizer.js
   * `getSelectedTrainNumbers(layout)`: 
     * Parameters: 
       * layout (Object): Layout object met hypercube data
@@ -177,19 +183,52 @@ LiveTrainExtension/
     * Afhankelijkheden: Leaflet bibliotheek
 
 ### 3.8 trainVisualizer.js
-* **Status**: Niet gestart
+* **Status**: Voltooid
 * **Bestandsnaam**: ui/trainVisualizer.js
 * **Functionaliteit**: Verantwoordelijk voor het visualiseren van treinen op de kaart
 * **Belangrijkste functies**:
-  * `updateTrainPositions(map, trainData)`: 
+  * `updateTrainPositions(map, trainData, selectedTrainIds, onMarkerClick)`: 
     * Parameters: 
       * map (Object): Map object
       * trainData (Array): Gegevens over treinlocaties
+      * selectedTrainIds (Array): Array met geselecteerde trein IDs
+      * onMarkerClick (Function): Callback voor klikken op marker
     * Return waarde: Geen
-    * Afhankelijkheden: mapRenderer.js, Leaflet bibliotheek
+    * Afhankelijkheden: Leaflet bibliotheek
+  * `addTrainMarker(map, train, selectedTrainIds, onMarkerClick)`:
+    * Parameters:
+      * map (Object): Map object
+      * train (Object): Treingegevens object
+      * selectedTrainIds (Array): Array met geselecteerde trein IDs
+      * onMarkerClick (Function): Callback voor klikken op marker
+    * Return waarde: Geen
+    * Afhankelijkheden: Leaflet bibliotheek
+  * `removeTrainMarker(map, trainId)`:
+    * Parameters:
+      * map (Object): Map object
+      * trainId (String): ID van de trein om te verwijderen
+    * Return waarde: Geen
+    * Afhankelijkheden: Leaflet bibliotheek
+  * `highlightTrainMarker(trainId, shouldHighlight, train)`:
+    * Parameters:
+      * trainId (String): ID van de trein om te markeren
+      * shouldHighlight (Boolean): Of de trein moet worden gemarkeerd
+      * train (Object): Treingegevens object (optioneel)
+    * Return waarde: Geen
+    * Afhankelijkheden: Geen
+  * `createPopupContent(train)`:
+    * Parameters:
+      * train (Object): Treingegevens object
+    * Return waarde: String met HTML content voor popup
+    * Afhankelijkheden: Geen
+  * `clearAllMarkers(map)`:
+    * Parameters:
+      * map (Object): Map object
+    * Return waarde: Geen
+    * Afhankelijkheden: Leaflet bibliotheek
 
 ### 3.9 style.css
-* **Status**: Voltooid - Bijgewerkt met styling voor treingegevens, selectiefunctionaliteit en kaart
+* **Status**: Voltooid - Bijgewerkt met styling voor treingegevens, selectiefunctionaliteit, kaart en markers
 * **Bestandsnaam**: lib/css/style.css
 * **Functionaliteit**: Stylesheet voor de extensie
 * **Belangrijkste functies**: N.v.t. (CSS bestand)
@@ -212,18 +251,18 @@ LiveTrainExtension/
 
 ## 4. Status
 Voltooide modules:
-- LiveTrainExtension.js (geïntegreerd met trainDataService, selectiefunctionaliteit en mapRenderer)
+- LiveTrainExtension.js (geïntegreerd met trainDataService, selectiefunctionaliteit, mapRenderer en trainVisualizer)
 - LiveTrainExtension.qext
 - initialProperties.js
 - propertyPanel.js (uitgebreid met selectie configuratie-opties)
 - api/trainDataService.js
 - api/apiConfig.js
 - ui/mapRenderer.js
-- lib/css/style.css (bijgewerkt met styling voor treingegevens, selectiefunctionaliteit en kaart)
+- ui/trainVisualizer.js
+- lib/css/style.css (bijgewerkt met styling voor treingegevens, selectiefunctionaliteit, kaart en markers)
 - lib/js/qlik-style.js
 
-Nog te implementeren modules:
-- ui/trainVisualizer.js
+Alle essentiële modulen zijn nu geïmplementeerd. De extensie beschikt over de basisfunctionaliteit om treinen op een kaart te visualiseren.
 
 ## 5. Volgende stappen
 
@@ -232,8 +271,8 @@ Nog te implementeren modules:
 2. ✅ Implementatie van de trainDataService voor het ophalen van treingegevens (Issue #2)
 3. ✅ Integratie met Qlik Sense velden voor filteren op treinnummers (Issue #3)
 4. ✅ Basisimplementatie van mapRenderer voor kaartweergave (Issue #4)
-5. 🔄 Visualisatie van treinen op de kaart (Issue #5)
-6. Dynamische updates van treinposities
+5. ✅ Visualisatie van treinen op de kaart (Issue #5)
+6. 🔄 Dynamische updates van treinposities (Issue #6)
 
 ### Nice-to-haves:
 1. Aanpasbare verversingsfrequentie van treingegevens via het eigenschappen paneel
@@ -242,4 +281,4 @@ Nog te implementeren modules:
 4. Extra informatie tonen bij klikken op een trein (vertraging, bestemming, etc.)
 5. Kleurcodering van treinen op basis van status (op tijd, vertraagd, etc.)
 
-Alle bovenstaande must-haves zijn nodig voor de basiswerking van de applicatie. De nice-to-haves zijn verbeteringen die later kunnen worden toegevoegd om de functionaliteit en gebruikerservaring te verbeteren.
+We hebben nog één must-have feature te implementeren: de dynamische updates van treinposities (Issue #6). Deze feature is essentieel voor de basiswerking van de applicatie omdat het zorgt voor real-time weergave van treinbewegingen zonder dat gebruikers handmatig hoeven te verversen. Na afronding van deze feature zal de extensie alle noodzakelijke functionaliteit bevatten voor praktisch gebruik in een productieomgeving. De nice-to-have features kunnen daarna worden toegevoegd om de gebruikerservaring en functionaliteit verder te verbeteren.
