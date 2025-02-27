@@ -9,6 +9,7 @@
   display: flex;
   flex-direction: column;
   font-family: 'QlikView Sans', sans-serif;
+  overflow: auto;
 }
 
 .train-info-section {
@@ -25,9 +26,98 @@
 }
 
 .train-info-section p {
-  margin: 0;
+  margin: 0 0 5px 0;
   font-size: 12px;
   color: #555;
+}
+
+.train-info-section .last-update {
+  font-style: italic;
+  color: #777;
+  margin-top: 5px;
+}
+
+.refresh-button {
+  margin-top: 10px;
+  padding: 5px 10px;
+  background-color: #009845;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.refresh-button:hover {
+  background-color: #007a36;
+}
+
+.train-data-section {
+  padding: 10px;
+  overflow: auto;
+}
+
+.train-data-section h3 {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+  font-weight: bold;
+  color: #333;
+}
+
+.train-data-table {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.train-data-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.train-data-table th {
+  background-color: #e0e0e0;
+  padding: 8px;
+  text-align: left;
+  border-bottom: 2px solid #ccc;
+  font-weight: bold;
+  position: sticky;
+  top: 0;
+}
+
+.train-data-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid #eee;
+}
+
+.train-data-table tr:hover {
+  background-color: #f9f9f9;
+}
+
+/* Trein status styling */
+.status-on-time td {
+  color: #009845;
+}
+
+.status-delayed td {
+  color: #e67e22;
+}
+
+.status-cancelled td {
+  color: #e74c3c;
+}
+
+.status-unknown td {
+  color: #7f8c8d;
+}
+
+.error-message {
+  color: #e74c3c;
+  padding: 10px;
+  border: 1px solid #e74c3c;
+  background-color: #fadbd8;
+  border-radius: 3px;
+  margin-top: 10px;
 }
 
 .train-map-container {
@@ -39,4 +129,22 @@
   justify-content: center;
   color: #777;
   font-style: italic;
+  margin-top: 10px;
+}
+
+/* Media queries voor responsieve weergave */
+@media (max-width: 600px) {
+  .train-data-table th,
+  .train-data-table td {
+    padding: 4px;
+    font-size: 11px;
+  }
+  
+  .train-info-section h2 {
+    font-size: 14px;
+  }
+  
+  .train-info-section p {
+    font-size: 11px;
+  }
 }
