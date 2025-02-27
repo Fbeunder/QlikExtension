@@ -29,6 +29,22 @@ Alternatief, voor ontwikkelaars:
    - Windows: `C:\\Users\\[USERNAME]\\Documents\\Qlik\\Sense\\Extensions\\`
    - Qlik Sense Server: `C:\\Program Files\\Qlik\\Sense\\Extensions\\`
 
+## API Key configuratie
+
+Om de extensie te laten werken met de NS API, moet u een geldige API key invullen:
+
+1. Verkrijg een API key via de [NS Developer Portal](https://apiportal.ns.nl/)
+2. Open het bestand `LiveTrainExtension/api/apiConfig.js` in een tekstbewerker
+3. Vul uw API key in bij de `key`-eigenschap in het `auth` object:
+   ```javascript
+   auth: {
+     method: 'apiKey',
+     headerName: 'Api-Key',
+     key: 'UW_API_KEY_HIER' // Vervang met uw eigen API key
+   },
+   ```
+4. Sla het bestand op
+
 ## Gebruik
 
 1. Open of maak een Qlik Sense applicatie
@@ -69,11 +85,17 @@ LiveTrainExtension/
 ├── LiveTrainExtension.qext       # Metadata bestand
 ├── initialProperties.js          # Initiële configuratie
 ├── propertyPanel.js              # Eigenschappen paneel
-├── lib/
-│   ├── css/
-│   │   └── style.css             # Stylesheet
-│   └── js/
-│       └── qlik-style.js         # Qlik Sense stijl helper
+├── api/
+│   ├── trainDataService.js       # Service voor het ophalen van treingegevens
+│   └── apiConfig.js              # API configuratie en endpoints
+├── ui/
+│   ├── mapRenderer.js            # Verantwoordelijk voor het weergeven van de kaart
+│   └── trainVisualizer.js        # Functionaliteit voor het visualiseren van treinen op de kaart
+└── lib/
+    ├── css/
+    │   └── style.css             # Stylesheet
+    └── js/
+        └── qlik-style.js         # Qlik Sense stijl helper
 ```
 
 ### Bijdragen
