@@ -68,9 +68,22 @@
   background-color: #c0392b;
 }
 
+/* Flex container voor de layout */
+.train-flex-container {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  height: calc(100% - 80px);
+  width: 100%;
+  overflow: hidden;
+}
+
 .train-data-section {
   padding: 10px;
   overflow: auto;
+  flex: 1 1 300px;
+  min-width: 300px;
+  max-height: 100%;
 }
 
 .train-data-section h3 {
@@ -109,117 +122,4 @@
 .train-data-table tr:hover {
   background-color: #f9f9f9;
   cursor: pointer;
-}
-
-/* Trein status styling */
-.status-on-time td {
-  color: #009845;
-}
-
-.status-delayed td {
-  color: #e67e22;
-}
-
-.status-cancelled td {
-  color: #e74c3c;
-}
-
-.status-unknown td {
-  color: #7f8c8d;
-}
-
-/* Geselecteerde trein styling */
-.selected-train td {
-  font-weight: bold;
-  background-color: rgba(41, 128, 185, 0.15);
-}
-
-.selected-train:hover td {
-  background-color: rgba(41, 128, 185, 0.25);
-}
-
-/* Verschillende status kleuren behouden bij selectie */
-.selected-train.status-on-time td {
-  box-shadow: inset 3px 0 0 #009845;
-}
-
-.selected-train.status-delayed td {
-  box-shadow: inset 3px 0 0 #e67e22;
-}
-
-.selected-train.status-cancelled td {
-  box-shadow: inset 3px 0 0 #e74c3c;
-}
-
-.selected-train.status-unknown td {
-  box-shadow: inset 3px 0 0 #7f8c8d;
-}
-
-.error-message {
-  color: #e74c3c;
-  padding: 10px;
-  border: 1px solid #e74c3c;
-  background-color: #fadbd8;
-  border-radius: 3px;
-  margin-top: 10px;
-}
-
-.train-map-container {
-  flex-grow: 1;
-  min-height: 200px;
-  background-color: #e0e0e0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #777;
-  font-style: italic;
-  margin-top: 10px;
-}
-
-/* Selectie modus markering */
-.selection-mode-none .train-data-table tr {
-  cursor: default;
-}
-
-.selection-mode-click .train-data-table tr {
-  cursor: pointer;
-}
-
-.selection-mode-multiple .train-data-table tr {
-  cursor: pointer;
-}
-
-/* Indeling voor selectie notificatie */
-.selection-notification {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background-color: rgba(52, 152, 219, 0.9);
-  color: white;
-  padding: 5px 10px;
-  border-radius: 3px;
-  font-size: 12px;
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-
-.selection-notification.visible {
-  opacity: 1;
-}
-
-/* Media queries voor responsieve weergave */
-@media (max-width: 600px) {
-  .train-data-table th,
-  .train-data-table td {
-    padding: 4px;
-    font-size: 11px;
-  }
-  
-  .train-info-section h2 {
-    font-size: 14px;
-  }
-  
-  .train-info-section p {
-    font-size: 11px;
-  }
 }
