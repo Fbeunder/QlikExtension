@@ -140,3 +140,196 @@ LiveTrainExtension/
       * trainData (Object): Treingegevens uit de API
     * Return waarde: Number met de vertraging in minuten
     * Afhankelijkheden: Geen
+
+### 3.6 apiConfig.js
+* **Status**: Voltooid - Bijgewerkt voor correcte NS-API configuratie
+* **Bestandsnaam**: api/apiConfig.js
+* **Functionaliteit**: Configuratie voor API-endpoints en authenticatie
+* **Belangrijkste functies**: 
+  * `buildUrl(endpoint)`: 
+    * Parameters: 
+      * endpoint (string): Relatieve endpoint path
+    * Return waarde: Volledige API URL
+    * Afhankelijkheden: Geen
+  * `configure(options)`: 
+    * Parameters: 
+      * options (Object): Configuratie opties
+    * Return waarde: Geen
+    * Afhankelijkheden: Geen
+
+### 3.7 mapRenderer.js
+* **Status**: Voltooid
+* **Bestandsnaam**: ui/mapRenderer.js
+* **Functionaliteit**: Verantwoordelijk voor het initialiseren en renderen van de kaart
+* **Belangrijkste functies**:
+  * `initMap(container, options)`: 
+    * Parameters: 
+      * container (HTMLElement): Container element voor de kaart
+      * options (Object): Configuratie opties voor de kaart
+    * Return waarde: Map object
+    * Afhankelijkheden: Leaflet bibliotheek
+  * `setMapView(lat, lng, zoom)`: 
+    * Parameters: 
+      * lat (Number): Latitude
+      * lng (Number): Longitude
+      * zoom (Number): Zoom niveau
+    * Return waarde: Geen
+    * Afhankelijkheden: Leaflet bibliotheek
+  * `resizeMap()`: 
+    * Parameters: Geen
+    * Return waarde: Geen
+    * Afhankelijkheden: Leaflet bibliotheek
+  * `clearMap()`: 
+    * Parameters: Geen
+    * Return waarde: Geen
+    * Afhankelijkheden: Leaflet bibliotheek
+  * `addBaseLayer(name, url, options)`: 
+    * Parameters: 
+      * name (String): Naam van de laag
+      * url (String): URL template voor de tilelaag
+      * options (Object): Configuratie opties
+    * Return waarde: Geen
+    * Afhankelijkheden: Leaflet bibliotheek
+  * `applyQlikTheme()`: 
+    * Parameters: Geen
+    * Return waarde: Geen
+    * Afhankelijkheden: QlikStyle
+  * `destroyMap()`: 
+    * Parameters: Geen
+    * Return waarde: Geen
+    * Afhankelijkheden: Leaflet bibliotheek
+
+### 3.8 trainVisualizer.js
+* **Status**: Voltooid - Uitgebreid met animatie en update-indicator functionaliteit
+* **Bestandsnaam**: ui/trainVisualizer.js
+* **Functionaliteit**: Verantwoordelijk voor het visualiseren van treinen op de kaart
+* **Belangrijkste functies**:
+  * `updateTrainPositions(map, trainData, selectedTrainIds, onMarkerClick)`: 
+    * Parameters: 
+      * map (Object): Map object
+      * trainData (Array): Gegevens over treinlocaties
+      * selectedTrainIds (Array): Array met geselecteerde trein IDs
+      * onMarkerClick (Function): Callback voor klikken op marker
+    * Return waarde: Geen
+    * Afhankelijkheden: Leaflet bibliotheek
+  * `addTrainMarker(map, train, selectedTrainIds, onMarkerClick)`:
+    * Parameters:
+      * map (Object): Map object
+      * train (Object): Treingegevens object
+      * selectedTrainIds (Array): Array met geselecteerde trein IDs
+      * onMarkerClick (Function): Callback voor klikken op marker
+    * Return waarde: Geen
+    * Afhankelijkheden: Leaflet bibliotheek
+  * `animateMarkerTransition(marker, startPosition, endPosition)`:
+    * Parameters:
+      * marker (Object): Leaflet marker object
+      * startPosition (Object): Startpositie (LatLng)
+      * endPosition (Array): Eindpositie [lat, lng]
+    * Return waarde: Geen
+    * Afhankelijkheden: Leaflet bibliotheek, window.requestAnimationFrame
+  * `removeTrainMarker(map, trainId)`:
+    * Parameters:
+      * map (Object): Map object
+      * trainId (String): ID van de trein om te verwijderen
+    * Return waarde: Geen
+    * Afhankelijkheden: Leaflet bibliotheek
+  * `highlightTrainMarker(trainId, shouldHighlight, train)`:
+    * Parameters:
+      * trainId (String): ID van de trein om te markeren
+      * shouldHighlight (Boolean): Of de trein moet worden gemarkeerd
+      * train (Object): Treingegevens object (optioneel)
+    * Return waarde: Geen
+    * Afhankelijkheden: Geen
+  * `createPopupContent(train)`:
+    * Parameters:
+      * train (Object): Treingegevens object
+    * Return waarde: String met HTML content voor popup
+    * Afhankelijkheden: Geen
+  * `clearAllMarkers(map)`:
+    * Parameters:
+      * map (Object): Map object
+    * Return waarde: Geen
+    * Afhankelijkheden: Leaflet bibliotheek
+  * `showUpdateIndicator(map)`:
+    * Parameters:
+      * map (Object): Map object
+    * Return waarde: Geen
+    * Afhankelijkheden: Leaflet bibliotheek, jQuery
+  * `hideUpdateIndicator(map)`:
+    * Parameters:
+      * map (Object): Map object
+    * Return waarde: Geen
+    * Afhankelijkheden: Leaflet bibliotheek, jQuery
+  * `configureAnimation(settings)`:
+    * Parameters:
+      * settings (Object): Configuratie-instellingen voor animatie
+    * Return waarde: Geen
+    * Afhankelijkheden: Geen
+
+### 3.9 style.css
+* **Status**: Voltooid - Bijgewerkt met styling voor dynamische updates, animaties en toggle controls
+* **Bestandsnaam**: lib/css/style.css
+* **Functionaliteit**: Stylesheet voor de extensie
+* **Belangrijkste functies**: N.v.t. (CSS bestand)
+
+### 3.10 qlik-style.js
+* **Status**: Voltooid
+* **Bestandsnaam**: lib/js/qlik-style.js
+* **Functionaliteit**: Hulpprogramma voor integratie met Qlik stijlen
+* **Belangrijkste functies**:
+  * `getCurrentTheme()`: 
+    * Parameters: Geen
+    * Return waarde: Huidige thema CSS klasse
+    * Afhankelijkheden: Qlik bibliotheek
+  * `applyTheme($element, theme)`: 
+    * Parameters:
+      * $element (jQuery): Het jQuery element om aan te passen
+      * theme (string): Theme naam ('qlik-light' of 'qlik-dark')
+    * Return waarde: Geen
+    * Afhankelijkheden: jQuery
+
+## 4. Status
+Voltooide modules:
+- LiveTrainExtension.js (geïntegreerd met trainDataService, selectiefunctionaliteit, mapRenderer, trainVisualizer en dynamische updates)
+- LiveTrainExtension.qext
+- initialProperties.js (uitgebreid met standaardwaarden voor dynamische updates)
+- propertyPanel.js (uitgebreid met configuratie-opties voor dynamische updates en animatie)
+- api/trainDataService.js (bijgewerkt voor integratie met NS-API en ReferenceError opgelost)
+- api/apiConfig.js (bijgewerkt voor correcte NS-API configuratie)
+- ui/mapRenderer.js
+- ui/trainVisualizer.js (uitgebreid met animatie en update-indicator functionaliteit)
+- lib/css/style.css (bijgewerkt met styling voor dynamische updates, animaties en toggle controls)
+- lib/js/qlik-style.js
+- README.md (bijgewerkt met duidelijke instructies voor NS-API configuratie)
+
+Alle modules zijn nu volledig geïmplementeerd, geïntegreerd en bugvrij. De belangrijke bugs in LiveTrainExtension.js en trainDataService.js zijn opgelost, waardoor de kaart nu correct wordt weergegeven en de automatische verversing werkt. De extensie beschikt over alle gewenste functionaliteit, inclusief real-time updates, vloeiende animaties en gebruikersvriendelijke configuratiemogelijkheden.
+
+## 5. Volgende stappen
+
+### Must-haves:
+1. ✅ Basisstructuur opzetten van de Qlik extensie
+2. ✅ Implementatie van de trainDataService voor het ophalen van treingegevens
+3. ✅ Integratie met Qlik Sense velden voor filteren op treinnummers
+4. ✅ Basisimplementatie van mapRenderer voor kaartweergave
+5. ✅ Visualisatie van treinen op de kaart
+6. ✅ Dynamische updates van treinposities
+7. ✅ API Key configuratie instructies in de documentatie
+8. ✅ Correcte implementatie van NS-API integratie
+9. ✅ Bugfix voor kaartweergaveproblemen - opgelost
+10. ✅ Bugfix voor ReferenceError in trainDataService.js - opgelost
+
+Alle must-have functionaliteiten zijn nu geïmplementeerd en getest. De extensie is volledig functioneel en klaar voor gebruik in productieomgevingen. Verdere verbeteringen zouden nice-to-have verbeteringen zijn die de gebruikerservaring verder kunnen verbeteren.
+
+### Nice-to-haves:
+1. ✅ Aanpasbare verversingsfrequentie van treingegevens via het eigenschappen paneel (geïmplementeerd)
+2. Mogelijkheid om verschillende kaartlagen te tonen/verbergen
+3. Historische weergave van treinbewegingen
+4. ✅ Extra informatie tonen bij klikken op een trein (vertraging, bestemming, etc.) (geïmplementeerd)
+5. ✅ Kleurcodering van treinen op basis van status (op tijd, vertraagd, etc.) (geïmplementeerd)
+6. ✅ Animatie van treinbewegingen op de kaart (geïmplementeerd)
+7. Uitgebreidere configuratiemogelijkheden voor de visuele weergave
+8. Prestatieoptimalisaties voor grote hoeveelheden treingegevens
+
+Alle essentiële functionaliteiten zijn afgerond en de kritieke bugfixes voor het tonen van de kaart en automatische verversing zijn geïmplementeerd. De resterende nice-to-have features kunnen in toekomstige iteraties worden toegevoegd om de extensie verder te verbeteren, maar zijn niet noodzakelijk voor de basiswerking van de applicatie. De extensie is nu volledig operationeel en biedt gebruikers een interactieve en informatieve manier om treinen in real-time te volgen.
+
+De basiswerking van de applicatie is nu volledig geïmplementeerd en alle must-have features zijn afgerond. De extensie is klaar voor gebruik en alle kritieke issues zijn opgelost. De resterende taken zijn alleen verbeteringen die niet essentieel zijn voor de kernfunctionaliteit van de extensie.
