@@ -176,3 +176,179 @@
   border-radius: 3px;
   margin-top: 10px;
 }
+
+/* Map container en stylings */
+.train-map-container {
+  flex: 1 1 300px;
+  min-height: 200px;
+  position: relative;
+  background-color: #f0f0f0;
+  border-left: 1px solid #ddd;
+}
+
+/* Leaflet customization */
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+  background-color: #f5f5f5;
+}
+
+/* Donker thema ondersteuning voor de kaart */
+.dark-theme-map {
+  background-color: #333 !important;
+}
+
+.dark-theme-map .leaflet-tile {
+  filter: brightness(0.8) contrast(1.2);
+}
+
+.dark-theme-map .leaflet-control {
+  background-color: #444;
+  color: #eee;
+  border-color: #666;
+}
+
+.dark-theme-map .leaflet-control a {
+  color: #eee;
+  background-color: #444;
+}
+
+.dark-theme-map .leaflet-bar a {
+  border-color: #666;
+}
+
+.dark-theme-map .leaflet-bar a:hover {
+  background-color: #555;
+}
+
+.dark-theme-map .leaflet-control-attribution {
+  background-color: rgba(40, 40, 40, 0.7);
+  color: #bbb;
+}
+
+.dark-theme-map .leaflet-control-attribution a {
+  color: #8cc;
+}
+
+/* Trein markers op de kaart */
+.train-marker {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: #3498db;
+  border: 2px solid white;
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.train-marker:hover {
+  width: 20px;
+  height: 20px;
+  margin-top: -2px;
+  margin-left: -2px;
+}
+
+.train-marker.selected {
+  background-color: #e74c3c;
+  width: 18px;
+  height: 18px;
+  margin-top: -1px;
+  margin-left: -1px;
+}
+
+/* Status kleuren voor markers */
+.train-marker.status-on-time {
+  background-color: #009845;
+}
+
+.train-marker.status-delayed {
+  background-color: #e67e22;
+}
+
+.train-marker.status-cancelled {
+  background-color: #e74c3c;
+}
+
+.train-marker.status-unknown {
+  background-color: #7f8c8d;
+}
+
+/* Marker popups */
+.train-popup {
+  font-size: 12px;
+}
+
+.train-popup h4 {
+  margin: 0 0 5px 0;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.train-popup p {
+  margin: 2px 0;
+}
+
+/* Selectie modus markering */
+.selection-mode-none .train-data-table tr {
+  cursor: default;
+}
+
+.selection-mode-click .train-data-table tr {
+  cursor: pointer;
+}
+
+.selection-mode-multiple .train-data-table tr {
+  cursor: pointer;
+}
+
+/* Indeling voor selectie notificatie */
+.selection-notification {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: rgba(52, 152, 219, 0.9);
+  color: white;
+  padding: 5px 10px;
+  border-radius: 3px;
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.selection-notification.visible {
+  opacity: 1;
+}
+
+/* Media queries voor responsieve weergave */
+@media (max-width: 600px) {
+  .train-data-table th,
+  .train-data-table td {
+    padding: 4px;
+    font-size: 11px;
+  }
+  
+  .train-info-section h2 {
+    font-size: 14px;
+  }
+  
+  .train-info-section p {
+    font-size: 11px;
+  }
+  
+  .train-flex-container {
+    flex-direction: column;
+  }
+  
+  .train-data-section,
+  .train-map-container {
+    flex: 1 1 auto;
+    width: 100%;
+  }
+  
+  .train-map-container {
+    min-height: 250px;
+    border-left: none;
+    border-top: 1px solid #ddd;
+  }
+}
