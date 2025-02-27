@@ -24,6 +24,12 @@ define([], function() {
               ref: 'qDef.trainNumberField',
               label: 'Treinnummer veld',
               expression: 'optional'
+            },
+            dimDescription: {
+              component: 'text',
+              label: 'Beschrijving',
+              style: 'hint',
+              translation: 'Kies een dimensie die de treinnummers bevat voor filtering'
             }
           }
         },
@@ -35,6 +41,50 @@ define([], function() {
         settings: {
           uses: 'settings',
           items: {
+            interactionSettings: {
+              type: 'items',
+              label: 'Interactie instellingen',
+              items: {
+                selectionMode: {
+                  ref: 'selectionMode', 
+                  type: 'string',
+                  component: 'dropdown',
+                  label: 'Selectie modus',
+                  options: [{
+                    value: 'click',
+                    label: 'Klik (één trein selecteren)'
+                  }, {
+                    value: 'multiple',
+                    label: 'Meervoudig (meerdere treinen selecteren)'
+                  }, {
+                    value: 'none',
+                    label: 'Geen (selectie uitgeschakeld)'
+                  }],
+                  defaultValue: 'click'
+                },
+                allowSelectionFromMap: {
+                  ref: 'allowSelectionFromMap',
+                  type: 'boolean',
+                  label: 'Selectie vanaf kaart toestaan',
+                  defaultValue: true 
+                },
+                bidirectionalSelection: {
+                  ref: 'bidirectionalSelection',
+                  type: 'boolean',
+                  label: 'Bidirectionele selectie',
+                  defaultValue: true,
+                  show: function(data) {
+                    return data.selectionMode !== 'none';
+                  }
+                },
+                highlightSelectedTrains: {
+                  ref: 'highlightSelectedTrains',
+                  type: 'boolean',
+                  label: 'Geselecteerde treinen markeren',
+                  defaultValue: true
+                }
+              }
+            },
             mapSettings: {
               type: 'items',
               label: 'Kaart instellingen',
@@ -79,6 +129,12 @@ define([], function() {
                   ref: 'autoRefresh',
                   type: 'boolean',
                   label: 'Automatisch verversen',
+                  defaultValue: true
+                },
+                refreshOnSelection: {
+                  ref: 'refreshOnSelection',
+                  type: 'boolean',
+                  label: 'Verversen bij selectie wijziging',
                   defaultValue: true
                 }
               }
