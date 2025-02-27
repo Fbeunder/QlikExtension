@@ -19,14 +19,16 @@ LiveTrainExtension/
 │   ├── mapRenderer.js            # Verantwoordelijk voor het weergeven van de kaart
 │   └── trainVisualizer.js        # Functionaliteit voor het visualiseren van treinen op de kaart
 └── lib/                          # Externe bibliotheken
-    ├── leaflet/                  # Map visualisatie bibliotheek
-    └── other-libs/               # Overige benodigde externe bibliotheken
+    ├── css/
+    │   └── style.css             # Stylesheet voor de extensie
+    └── js/
+        └── qlik-style.js         # Hulpprogramma voor integratie met Qlik stijlen
 ```
 
 ## 3. Modules
 
 ### 3.1 LiveTrainExtension.js
-* **Status**: Niet gestart
+* **Status**: Voltooid - Basisimplementatie
 * **Bestandsnaam**: LiveTrainExtension.js
 * **Functionaliteit**: Hoofdmodule die de extensie initialiseert en integreert met Qlik Sense
 * **Belangrijkste functies**:
@@ -42,19 +44,19 @@ LiveTrainExtension/
     * Afhankelijkheden: Geen
 
 ### 3.2 LiveTrainExtension.qext
-* **Status**: Niet gestart
+* **Status**: Voltooid
 * **Bestandsnaam**: LiveTrainExtension.qext
 * **Functionaliteit**: Metadata bestand voor de extensie
 * **Belangrijkste functies**: N.v.t. (JSON configuratiebestand)
 
 ### 3.3 initialProperties.js
-* **Status**: Niet gestart
+* **Status**: Voltooid
 * **Bestandsnaam**: initialProperties.js
 * **Functionaliteit**: Definieert de initiële eigenschappen van de extensie
 * **Belangrijkste functies**: N.v.t. (exporteert alleen een configuratie object)
 
 ### 3.4 propertyPanel.js
-* **Status**: Niet gestart
+* **Status**: Voltooid
 * **Bestandsnaam**: propertyPanel.js
 * **Functionaliteit**: Definieert het eigenschappen paneel voor de extensie
 * **Belangrijkste functies**:
@@ -104,20 +106,52 @@ LiveTrainExtension/
     * Return waarde: Geen
     * Afhankelijkheden: mapRenderer.js
 
+### 3.9 style.css
+* **Status**: Voltooid - Basisimplementatie
+* **Bestandsnaam**: lib/css/style.css
+* **Functionaliteit**: Stylesheet voor de extensie
+* **Belangrijkste functies**: N.v.t. (CSS bestand)
+
+### 3.10 qlik-style.js
+* **Status**: Voltooid
+* **Bestandsnaam**: lib/js/qlik-style.js
+* **Functionaliteit**: Hulpprogramma voor integratie met Qlik stijlen
+* **Belangrijkste functies**:
+  * `getCurrentTheme()`: 
+    * Parameters: Geen
+    * Return waarde: Huidige thema CSS klasse
+    * Afhankelijkheden: Qlik bibliotheek
+  * `applyTheme($element, theme)`: 
+    * Parameters:
+      * $element (jQuery): Het jQuery element om aan te passen
+      * theme (string): Theme naam ('qlik-light' of 'qlik-dark')
+    * Return waarde: Geen
+    * Afhankelijkheden: jQuery
+
 ## 4. Status
-Alle modules zijn momenteel niet gestart.
+Voltooide modules:
+- LiveTrainExtension.js (basisimplementatie)
+- LiveTrainExtension.qext
+- initialProperties.js
+- propertyPanel.js
+- lib/css/style.css (basisimplementatie)
+- lib/js/qlik-style.js
+
+Nog te implementeren modules:
+- api/trainDataService.js
+- api/apiConfig.js
+- ui/mapRenderer.js
+- ui/trainVisualizer.js
 
 ## 5. Volgende stappen
 
 ### Must-haves:
-1. Basisstructuur opzetten van de Qlik extensie
-2. Implementatie van de LiveTrainExtension.js hoofdmodule
-3. Configuratie van het extensie metadata bestand (LiveTrainExtension.qext)
-4. Implementatie van de trainDataService voor het ophalen van treingegevens
-5. Integratie met Qlik Sense velden voor filteren op treinnummers
-6. Basisimplementatie van mapRenderer voor kaartweergave
-7. Visualisatie van treinen op de kaart
-8. Dynamische updates van treinposities
+1. ✅ Basisstructuur opzetten van de Qlik extensie
+2. 🔄 Implementatie van de trainDataService voor het ophalen van treingegevens (Issue #2)
+3. Integratie met Qlik Sense velden voor filteren op treinnummers
+4. Basisimplementatie van mapRenderer voor kaartweergave
+5. Visualisatie van treinen op de kaart
+6. Dynamische updates van treinposities
 
 ### Nice-to-haves:
 1. Aanpasbare verversingsfrequentie van treingegevens via het eigenschappen paneel
