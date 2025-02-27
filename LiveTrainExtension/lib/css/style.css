@@ -52,6 +52,22 @@
   background-color: #007a36;
 }
 
+.clear-button {
+  margin-top: 10px;
+  margin-left: 5px;
+  padding: 5px 10px;
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.clear-button:hover {
+  background-color: #c0392b;
+}
+
 .train-data-section {
   padding: 10px;
   overflow: auto;
@@ -92,6 +108,7 @@
 
 .train-data-table tr:hover {
   background-color: #f9f9f9;
+  cursor: pointer;
 }
 
 /* Trein status styling */
@@ -109,6 +126,33 @@
 
 .status-unknown td {
   color: #7f8c8d;
+}
+
+/* Geselecteerde trein styling */
+.selected-train td {
+  font-weight: bold;
+  background-color: rgba(41, 128, 185, 0.15);
+}
+
+.selected-train:hover td {
+  background-color: rgba(41, 128, 185, 0.25);
+}
+
+/* Verschillende status kleuren behouden bij selectie */
+.selected-train.status-on-time td {
+  box-shadow: inset 3px 0 0 #009845;
+}
+
+.selected-train.status-delayed td {
+  box-shadow: inset 3px 0 0 #e67e22;
+}
+
+.selected-train.status-cancelled td {
+  box-shadow: inset 3px 0 0 #e74c3c;
+}
+
+.selected-train.status-unknown td {
+  box-shadow: inset 3px 0 0 #7f8c8d;
 }
 
 .error-message {
@@ -130,6 +174,37 @@
   color: #777;
   font-style: italic;
   margin-top: 10px;
+}
+
+/* Selectie modus markering */
+.selection-mode-none .train-data-table tr {
+  cursor: default;
+}
+
+.selection-mode-click .train-data-table tr {
+  cursor: pointer;
+}
+
+.selection-mode-multiple .train-data-table tr {
+  cursor: pointer;
+}
+
+/* Indeling voor selectie notificatie */
+.selection-notification {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: rgba(52, 152, 219, 0.9);
+  color: white;
+  padding: 5px 10px;
+  border-radius: 3px;
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.selection-notification.visible {
+  opacity: 1;
 }
 
 /* Media queries voor responsieve weergave */
