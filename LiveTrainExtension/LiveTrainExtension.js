@@ -11,8 +11,9 @@ define([
   './api/trainDataService',
   './api/apiConfig',
   './ui/mapRenderer',
+  './ui/trainVisualizer',
   'css!./lib/css/style.css'
-], function(qlik, $, initialProperties, propertyPanel, QlikStyle, trainDataService, apiConfig, mapRenderer) {
+], function(qlik, $, initialProperties, propertyPanel, QlikStyle, trainDataService, apiConfig, mapRenderer, trainVisualizer) {
   'use strict';
 
   // Extensie definities
@@ -158,6 +159,11 @@ define([
       // Initialiseer de kaart
       self.initMap($element, layout);
       
+      // Update de treinen op de kaart als er data beschikbaar is
+      if (trainData && trainData.length > 0) {
+        self.updateTrainVisualization(trainData, trainNumbers);
+      }
+      
       // Registreer event handlers
       $element.find('#refreshTrainData').on('click', function() {
         self.refreshTrainData(trainNumbers, $element);
@@ -216,6 +222,32 @@ define([
       
       // Pas thema toe op basis van Qlik Sense thema
       mapRenderer.applyQlikTheme();
+    },
+    
+    /**
+     * Update de trein visualisatie op de kaart
+     * @param {Array} trainData - Array met treingegevens
+     * @param {Array} selectedTrainIds - Array met geselecteerde trein IDs
+     */
+    updateTrainVisualization: function(trainData, selectedTrainIds) {
+      var self = this;
+      var map = mapRenderer.getMap();
+      
+      if (!map || !trainData) return;
+      
+      // Verwijder eerst alle markers
+      trainVisualizer.clearAllMarkers(map);
+      
+      // Update de treinposities op de kaart
+      trainVisualizer.updateTrainPositions(
+        map, 
+        trainData, 
+        selectedTrainIds, 
+        function(trainId) {
+          // Callback voor trein marker klik - selecteert de trein
+          self.selectTrain(trainId, true);
+        }
+      );
     },
     
     /**
@@ -334,7 +366,10 @@ define([
         trainDataService.getTrainLocations(trainNumbers)
           .then(function(data) {
             console.log('Treingegevens opgehaald:', data);
-            // Data is nu beschikbaar in de service cache
+            
+            // Update de visualisatie met de nieuwe data
+            var selectedTrainIds = self.getSelectedTrainNumbers($scope.layout);
+            self.updateTrainVisualization(data, selectedTrainIds);
           })
           .catch(function(error) {
             console.error('Fout bij ophalen treingegevens:', error);
@@ -350,6 +385,10 @@ define([
         
         // Start verversing met callback
         trainDataService.startAutoRefresh(function(data) {
+          // Update train markers bij nieuwe data
+          var selectedTrainIds = self.getSelectedTrainNumbers($scope.layout);
+          self.updateTrainVisualization(data, selectedTrainIds);
+          
           // Bij elke update de extensie opnieuw renderen
           $scope.$apply(function() {
             $element.scope().object.paint($element, $scope.layout);
@@ -398,6 +437,13 @@ define([
               field.OnData.bind(function() {
                 // Ververs gegevens als er een selectie wijziging is
                 var trainNumbers = self.getSelectedTrainNumbers($scope.layout);
+                var trainData = trainDataService.getCachedData();
+                
+                // Update markers op basis van nieuwe selecties
+                if (trainData) {
+                  self.updateTrainVisualization(trainData, trainNumbers);
+                }
+                
                 if ($scope.layout.refreshOnSelection) {
                   self.refreshTrainData(trainNumbers, $element);
                 } else {
