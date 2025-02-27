@@ -9,28 +9,28 @@ define([], function() {
    * API configuratie-object met endpoints en parameters voor treindataverzoeken
    */
   var apiConfig = {
-    // Basis URL voor de trein API
-    baseUrl: 'https://api.openraildata.com/v1', // Voorbeeld URL, moet vervangen worden door werkelijke API endpoint
+    // Basis URL voor de NS API
+    baseUrl: 'https://gateway.apiportal.ns.nl/virtual-train-api/api',
     
     // Endpoints voor verschillende diensten
     endpoints: {
-      trainLocations: '/train-locations',  // Endpoint voor treinlocaties
-      trainDetails: '/train-details',      // Endpoint voor details van specifieke treinen
-      stations: '/stations'                // Endpoint voor stationsinformatie
+      trainLocations: '/vehicle',    // Endpoint voor treinlocaties
+      trainDetails: '/vehicle',      // Endpoint voor details van specifieke treinen
+      stations: '/stations'          // Endpoint voor stationsinformatie (indien beschikbaar)
     },
     
     // API authenticatie informatie
     auth: {
       method: 'apiKey',          // Authenticatiemethode
-      headerName: 'Api-Key',     // Naam van de header voor de API-key
+      headerName: 'Ocp-Apim-Subscription-Key',  // Naam van de header voor de NS API key
       key: ''                    // API-key waarde (moet door de gebruiker worden ingesteld)
     },
     
     // Standaard parameters voor API verzoeken
     defaultParams: {
-      format: 'json',
-      maxResults: 100,
-      includeDetails: true
+      lat: 52.3676,     // Standaard latitude (Amsterdam)
+      lng: 4.9041,      // Standaard longitude (Amsterdam)
+      features: 'trein' // Filter op treintype
     },
     
     // Constanten voor API parameters
@@ -69,6 +69,10 @@ define([], function() {
         // Overschrijf configuratie met opgegeven opties
         if (options.baseUrl) this.baseUrl = options.baseUrl;
         if (options.apiKey) this.auth.key = options.apiKey;
+        
+        // Update default parameters indien opgegeven
+        if (options.lat) this.defaultParams.lat = options.lat;
+        if (options.lng) this.defaultParams.lng = options.lng;
       }
     }
   };
