@@ -416,9 +416,6 @@ define([
       this.$scope = $scope;
       var self = this;
       
-      // Sla een referentie naar het hoofdobject op om configureAnimationSettings te kunnen gebruiken
-      var parentObj = $element.scope().object;
-      
       // Bepaal verversingsinterval op basis van instelling
       $scope.getRefreshInterval = function() {
         if (!$scope.layout) return 15; // Default
@@ -451,8 +448,8 @@ define([
             console.log('Treingegevens opgehaald:', data);
             
             // Update de visualisatie met de nieuwe data
-            var selectedTrainIds = parentObj.getSelectedTrainNumbers($scope.layout);
-            parentObj.updateTrainVisualization(data, selectedTrainIds, $scope.layout);
+            var selectedTrainIds = $element.scope().object.getSelectedTrainNumbers($scope.layout);
+            $element.scope().object.updateTrainVisualization(data, selectedTrainIds, $scope.layout);
           })
           .catch(function(error) {
             console.error('Fout bij ophalen treingegevens:', error);
@@ -472,8 +469,8 @@ define([
         // Start verversing met callback
         trainDataService.startAutoRefresh(function(data) {
           // Update train markers bij nieuwe data
-          var selectedTrainIds = parentObj.getSelectedTrainNumbers($scope.layout);
-          parentObj.updateTrainVisualization(data, selectedTrainIds, $scope.layout);
+          var selectedTrainIds = $element.scope().object.getSelectedTrainNumbers($scope.layout);
+          $element.scope().object.updateTrainVisualization(data, selectedTrainIds, $scope.layout);
           
           // Update het tijdstip van laatste update in de UI
           var lastUpdate = trainDataService.getLastUpdateTime();
@@ -553,8 +550,8 @@ define([
       $scope.$watchGroup(['layout.animateUpdates', 'layout.animationDuration'], function() {
         // Update animatie instellingen
         if ($scope.layout) {
-          // Gebruik het parentObj in plaats van self om de functie correct aan te roepen
-          parentObj.configureAnimationSettings($scope.layout);
+          // Gebruik het object zelf (via $element.scope().object) om de functie correct aan te roepen
+          $element.scope().object.configureAnimationSettings($scope.layout);
         }
       });
       
@@ -573,19 +570,19 @@ define([
             if (field) {
               field.OnData.bind(function() {
                 // Ververs gegevens als er een selectie wijziging is
-                var trainNumbers = parentObj.getSelectedTrainNumbers($scope.layout);
+                var trainNumbers = $element.scope().object.getSelectedTrainNumbers($scope.layout);
                 var trainData = trainDataService.getCachedData();
                 
                 // Update markers op basis van nieuwe selecties
                 if (trainData) {
-                  parentObj.updateTrainVisualization(trainData, trainNumbers, $scope.layout);
+                  $element.scope().object.updateTrainVisualization(trainData, trainNumbers, $scope.layout);
                 }
                 
                 if ($scope.layout.refreshOnSelection) {
-                  parentObj.refreshTrainData(trainNumbers, $element);
+                  $element.scope().object.refreshTrainData(trainNumbers, $element);
                 } else {
                   // Alleen UI verversen zonder nieuwe data op te halen
-                  parentObj.paint($element, $scope.layout);
+                  $element.scope().object.paint($element, $scope.layout);
                 }
               });
             }
