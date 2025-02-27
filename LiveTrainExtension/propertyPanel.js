@@ -113,17 +113,14 @@ define([], function() {
                 }
               }
             },
-            dataSettings: {
+            updateSettings: {
               type: 'items',
-              label: 'Data instellingen',
+              label: 'Update instellingen',
               items: {
-                refreshInterval: {
-                  ref: 'refreshInterval',
-                  type: 'number',
-                  label: 'Verversingsinterval (seconden)',
-                  defaultValue: 30,
-                  min: 5,
-                  max: 300
+                autoUpdateSection: {
+                  component: 'text',
+                  label: 'Automatische updates',
+                  style: 'header'
                 },
                 autoRefresh: {
                   ref: 'autoRefresh',
@@ -131,11 +128,102 @@ define([], function() {
                   label: 'Automatisch verversen',
                   defaultValue: true
                 },
+                refreshIntervalType: {
+                  ref: 'refreshIntervalType',
+                  type: 'string',
+                  component: 'dropdown',
+                  label: 'Verversingsinterval',
+                  options: [{
+                    value: 'fast',
+                    label: 'Snel (5 seconden)'
+                  }, {
+                    value: 'normal',
+                    label: 'Normaal (15 seconden)'
+                  }, {
+                    value: 'slow',
+                    label: 'Langzaam (30 seconden)'
+                  }, {
+                    value: 'custom',
+                    label: 'Aangepast'
+                  }],
+                  defaultValue: 'normal',
+                  show: function(data) {
+                    return data.autoRefresh === true;
+                  }
+                },
+                refreshInterval: {
+                  ref: 'refreshInterval',
+                  type: 'number',
+                  label: 'Aangepast interval (seconden)',
+                  defaultValue: 15,
+                  min: 5,
+                  max: 300,
+                  show: function(data) {
+                    return data.autoRefresh === true && data.refreshIntervalType === 'custom';
+                  }
+                },
+                pauseRefreshWhenNotVisible: {
+                  ref: 'pauseRefreshWhenNotVisible',
+                  type: 'boolean',
+                  label: 'Verversing pauzeren bij inactief venster',
+                  defaultValue: true,
+                  show: function(data) {
+                    return data.autoRefresh === true;
+                  }
+                },
                 refreshOnSelection: {
                   ref: 'refreshOnSelection',
                   type: 'boolean',
                   label: 'Verversen bij selectie wijziging',
                   defaultValue: true
+                },
+                showUpdateIndicator: {
+                  ref: 'showUpdateIndicator',
+                  type: 'boolean',
+                  label: 'Toon update-indicator',
+                  defaultValue: true
+                },
+                animationSection: {
+                  component: 'text',
+                  label: 'Animatie instellingen',
+                  style: 'header'
+                },
+                animateUpdates: {
+                  ref: 'animateUpdates',
+                  type: 'boolean',
+                  label: 'Animeer positie updates',
+                  defaultValue: true
+                },
+                animationDuration: {
+                  ref: 'animationDuration',
+                  type: 'number',
+                  label: 'Animatieduur (milliseconden)',
+                  defaultValue: 1000,
+                  min: 200,
+                  max: 5000,
+                  show: function(data) {
+                    return data.animateUpdates === true;
+                  }
+                }
+              }
+            },
+            dataSettings: {
+              type: 'items',
+              label: 'Data instellingen',
+              items: {
+                maxResults: {
+                  ref: 'maxResults',
+                  type: 'number',
+                  label: 'Maximum aantal resultaten',
+                  defaultValue: 100,
+                  min: 10,
+                  max: 500
+                },
+                filterBySelection: {
+                  ref: 'filterBySelection',
+                  type: 'boolean',
+                  label: 'Alleen geselecteerde treinen ophalen',
+                  defaultValue: false
                 }
               }
             }
