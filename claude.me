@@ -28,7 +28,7 @@ LiveTrainExtension/
 ## 3. Modules
 
 ### 3.1 LiveTrainExtension.js
-* **Status**: Voltooid - Geïntegreerd met trainDataService
+* **Status**: Voltooid - Geïntegreerd met trainDataService en selectiemogelijkheden
 * **Bestandsnaam**: LiveTrainExtension.js
 * **Functionaliteit**: Hoofdmodule die de extensie initialiseert en integreert met Qlik Sense
 * **Belangrijkste functies**:
@@ -48,6 +48,21 @@ LiveTrainExtension/
     * Parameters: Geen
     * Return waarde: Controller object
     * Afhankelijkheden: trainDataService.js, apiConfig.js
+  * `getSelectedTrainNumbers(layout)`: 
+    * Parameters: 
+      * layout (Object): Layout object met hypercube data
+    * Return waarde: Array met geselecteerde treinnummers
+    * Afhankelijkheden: Geen
+  * `selectTrain(trainId, multiSelect)`: 
+    * Parameters: 
+      * trainId (String): Treinnummer om te selecteren
+      * multiSelect (Boolean): Of meerdere selecties toegestaan zijn
+    * Return waarde: Geen
+    * Afhankelijkheden: Qlik API
+  * `clearSelections()`: 
+    * Parameters: Geen
+    * Return waarde: Geen
+    * Afhankelijkheden: Qlik API
 
 ### 3.2 LiveTrainExtension.qext
 * **Status**: Voltooid
@@ -62,7 +77,7 @@ LiveTrainExtension/
 * **Belangrijkste functies**: N.v.t. (exporteert alleen een configuratie object)
 
 ### 3.4 propertyPanel.js
-* **Status**: Voltooid
+* **Status**: Voltooid - Uitgebreid met selectie configuratie-opties
 * **Bestandsnaam**: propertyPanel.js
 * **Functionaliteit**: Definieert het eigenschappen paneel voor de extensie
 * **Belangrijkste functies**:
@@ -138,7 +153,7 @@ LiveTrainExtension/
     * Afhankelijkheden: mapRenderer.js
 
 ### 3.9 style.css
-* **Status**: Voltooid - Bijgewerkt met styling voor treingegevens
+* **Status**: Voltooid - Bijgewerkt met styling voor treingegevens en selectiefunctionaliteit
 * **Bestandsnaam**: lib/css/style.css
 * **Functionaliteit**: Stylesheet voor de extensie
 * **Belangrijkste functies**: N.v.t. (CSS bestand)
@@ -161,13 +176,13 @@ LiveTrainExtension/
 
 ## 4. Status
 Voltooide modules:
-- LiveTrainExtension.js (geïntegreerd met trainDataService)
+- LiveTrainExtension.js (geïntegreerd met trainDataService en selectiefunctionaliteit)
 - LiveTrainExtension.qext
 - initialProperties.js
-- propertyPanel.js
+- propertyPanel.js (uitgebreid met selectie configuratie-opties)
 - api/trainDataService.js
 - api/apiConfig.js
-- lib/css/style.css (bijgewerkt met styling voor treingegevens)
+- lib/css/style.css (bijgewerkt met styling voor treingegevens en selectiefunctionaliteit)
 - lib/js/qlik-style.js
 
 Nog te implementeren modules:
@@ -179,8 +194,8 @@ Nog te implementeren modules:
 ### Must-haves:
 1. ✅ Basisstructuur opzetten van de Qlik extensie
 2. ✅ Implementatie van de trainDataService voor het ophalen van treingegevens (Issue #2)
-3. 🔄 Integratie met Qlik Sense velden voor filteren op treinnummers (Issue #3)
-4. Basisimplementatie van mapRenderer voor kaartweergave
+3. ✅ Integratie met Qlik Sense velden voor filteren op treinnummers (Issue #3)
+4. 🔄 Basisimplementatie van mapRenderer voor kaartweergave (Issue #4)
 5. Visualisatie van treinen op de kaart
 6. Dynamische updates van treinposities
 
