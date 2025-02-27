@@ -55,8 +55,18 @@ define([
         html += '<p class="last-update">Laatst bijgewerkt: ' + lastUpdate.toLocaleTimeString() + '</p>';
       }
 
-      // Voeg refresh knop toe
+      // Voeg refresh knop en auto-refresh controls toe
+      html += '<div class="refresh-controls">';
       html += '<button class="qlik-button refresh-button" id="refreshTrainData">Ververs gegevens</button>';
+      
+      // Auto-refresh toggle knop
+      html += '<div class="auto-refresh-toggle">';
+      html += '<label for="autoRefreshToggle">Auto-refresh: </label>';
+      html += '<button class="qlik-button toggle-button' + (layout.autoRefresh ? ' active' : '') + '" id="autoRefreshToggle">' + 
+              (layout.autoRefresh ? 'Aan' : 'Uit') + '</button>';
+      html += '</div>';
+      
+      html += '</div>';
       
       html += '</div>';
       
@@ -161,12 +171,32 @@ define([
       
       // Update de treinen op de kaart als er data beschikbaar is
       if (trainData && trainData.length > 0) {
-        self.updateTrainVisualization(trainData, trainNumbers);
+        self.updateTrainVisualization(trainData, trainNumbers, layout);
       }
+      
+      // Configureer animatie instellingen
+      self.configureAnimationSettings(layout);
       
       // Registreer event handlers
       $element.find('#refreshTrainData').on('click', function() {
         self.refreshTrainData(trainNumbers, $element);
+      });
+      
+      // Event handler voor de auto-refresh toggle
+      $element.find('#autoRefreshToggle').on('click', function() {
+        // Toggle auto-refresh status
+        self.$scope.layout.autoRefresh = !self.$scope.layout.autoRefresh;
+        
+        // Update knop text en class
+        $(this).text(self.$scope.layout.autoRefresh ? 'Aan' : 'Uit');
+        $(this).toggleClass('active', self.$scope.layout.autoRefresh);
+        
+        // Start of stop auto-refresh
+        if (self.$scope.layout.autoRefresh) {
+          self.$scope.startAutoRefresh();
+        } else {
+          self.$scope.stopAutoRefresh();
+        }
       });
       
       // Event handler voor wissen van selecties
@@ -182,7 +212,7 @@ define([
         });
       }
 
-      // Eerste keer gegevens laden als automatische verversing actief is
+      // Eerste keer gegevens laden als automatische verversing actief is en er nog geen data is
       if (layout.autoRefresh && !trainDataService.getCachedData()) {
         self.refreshTrainData(trainNumbers, $element);
       }
@@ -225,27 +255,51 @@ define([
     },
     
     /**
+     * Configureer animatie instellingen voor treinvisualisatie
+     * @param {Object} layout - Layout object met configuratie
+     */
+    configureAnimationSettings: function(layout) {
+      // Configureer animatie instellingen op basis van layout
+      trainVisualizer.configureAnimation({
+        enabled: layout.animateUpdates !== undefined ? layout.animateUpdates : true,
+        duration: layout.animationDuration || 1000,
+        easing: 'linear' // Standaard easing, kan worden uitgebreid
+      });
+    },
+    
+    /**
      * Update de trein visualisatie op de kaart
      * @param {Array} trainData - Array met treingegevens
      * @param {Array} selectedTrainIds - Array met geselecteerde trein IDs
+     * @param {Object} layout - Layout object met configuratie
      */
-    updateTrainVisualization: function(trainData, selectedTrainIds) {
+    updateTrainVisualization: function(trainData, selectedTrainIds, layout) {
       var self = this;
       var map = mapRenderer.getMap();
       
       if (!map || !trainData) return;
       
-      // Verwijder eerst alle markers
-      trainVisualizer.clearAllMarkers(map);
+      // Als showUpdateIndicator is ingesteld, toon de indicator
+      if (layout && layout.showUpdateIndicator) {
+        trainVisualizer.showUpdateIndicator(map);
+      }
+      
+      // Filter de gegevens op basis van geselecteerde treinnummers indien nodig
+      var filteredTrainData = trainData;
+      if (selectedTrainIds && selectedTrainIds.length > 0 && layout && layout.filterBySelection) {
+        filteredTrainData = trainData.filter(function(train) {
+          return selectedTrainIds.indexOf(train.number) !== -1;
+        });
+      }
       
       // Update de treinposities op de kaart
       trainVisualizer.updateTrainPositions(
         map, 
-        trainData, 
+        filteredTrainData, 
         selectedTrainIds, 
         function(trainId) {
           // Callback voor trein marker klik - selecteert de trein
-          self.selectTrain(trainId, true);
+          self.selectTrain(trainId, layout.selectionMode === 'multiple');
         }
       );
     },
@@ -336,8 +390,12 @@ define([
       // Toon laden indicator
       $element.find('.train-data-section').html('<p>Treingegevens worden opgehaald...</p>');
       
+      // Gebruik filterBySelection instelling om te bepalen of we filteren
+      var useTrainFilter = self.$scope.layout.filterBySelection && trainNumbers.length > 0;
+      var trainFilter = useTrainFilter ? trainNumbers : null;
+      
       // Haal de traingegevens op
-      trainDataService.getTrainLocations(trainNumbers)
+      trainDataService.getTrainLocations(trainFilter)
         .then(function(data) {
           // Herrender de extensie om de nieuwe gegevens te tonen
           self.paint($element, self.$scope.layout);
@@ -358,18 +416,40 @@ define([
       this.$scope = $scope;
       var self = this;
       
+      // Bepaal verversingsinterval op basis van instelling
+      $scope.getRefreshInterval = function() {
+        if (!$scope.layout) return 15; // Default
+        
+        switch ($scope.layout.refreshIntervalType) {
+          case 'fast':
+            return 5;
+          case 'normal':
+            return 15;
+          case 'slow':
+            return 30;
+          case 'custom':
+            return Math.max(5, Math.min(300, $scope.layout.refreshInterval || 15));
+          default:
+            return 15;
+        }
+      };
+      
       /**
        * Haalt treingegevens op en verwerkt ze
        * @param {Array} trainNumbers - Optionele lijst met treinnummers
        */
       $scope.getTrainData = function(trainNumbers) {
-        trainDataService.getTrainLocations(trainNumbers)
+        // Bepaal of we moeten filteren op treinnummers
+        var useTrainFilter = $scope.layout.filterBySelection && trainNumbers && trainNumbers.length > 0;
+        var trainFilter = useTrainFilter ? trainNumbers : null;
+        
+        trainDataService.getTrainLocations(trainFilter)
           .then(function(data) {
             console.log('Treingegevens opgehaald:', data);
             
             // Update de visualisatie met de nieuwe data
             var selectedTrainIds = self.getSelectedTrainNumbers($scope.layout);
-            self.updateTrainVisualization(data, selectedTrainIds);
+            self.updateTrainVisualization(data, selectedTrainIds, $scope.layout);
           })
           .catch(function(error) {
             console.error('Fout bij ophalen treingegevens:', error);
@@ -380,18 +460,38 @@ define([
        * Start automatische verversing
        */
       $scope.startAutoRefresh = function() {
-        // Verversingsinterval ophalen uit layout (of standaard 30 seconden)
-        var refreshInterval = $scope.layout.refreshInterval || 30;
+        // Verversingsinterval ophalen uit layout
+        var refreshInterval = $scope.getRefreshInterval();
+        
+        // Stop eerst eventuele bestaande timer
+        $scope.stopAutoRefresh();
         
         // Start verversing met callback
         trainDataService.startAutoRefresh(function(data) {
           // Update train markers bij nieuwe data
           var selectedTrainIds = self.getSelectedTrainNumbers($scope.layout);
-          self.updateTrainVisualization(data, selectedTrainIds);
+          self.updateTrainVisualization(data, selectedTrainIds, $scope.layout);
           
-          // Bij elke update de extensie opnieuw renderen
-          $scope.$apply(function() {
-            $element.scope().object.paint($element, $scope.layout);
+          // Update het tijdstip van laatste update in de UI
+          var lastUpdate = trainDataService.getLastUpdateTime();
+          if (lastUpdate) {
+            var $lastUpdateEl = $element.find('.last-update');
+            if ($lastUpdateEl.length) {
+              $lastUpdateEl.text('Laatst bijgewerkt: ' + lastUpdate.toLocaleTimeString());
+            } else {
+              // Voeg toe aan de info sectie als het element nog niet bestaat
+              $element.find('.train-info-section').append(
+                '<p class="last-update">Laatst bijgewerkt: ' + lastUpdate.toLocaleTimeString() + '</p>'
+              );
+            }
+          }
+          
+          // Bij elke update de extensie opnieuw renderen als dat nodig is
+          // We gebruiken applyAsync om beter te presteren met veel updates
+          $scope.$applyAsync(function() {
+            if ($scope.layout.autoRefresh) {
+              $element.scope().object.paint($element, $scope.layout);
+            }
           });
         }, refreshInterval);
       };
@@ -410,6 +510,23 @@ define([
         // Pas de kaartgrootte aan
         mapRenderer.resizeMap();
       };
+      
+      /**
+       * Handler voor wijzigingen in documentvisibiliteit
+       */
+      $scope.handleVisibilityChange = function() {
+        if ($scope.layout && $scope.layout.pauseRefreshWhenNotVisible) {
+          if (document.hidden) {
+            // Pauzeer updates wanneer document niet zichtbaar is
+            $scope.stopAutoRefresh();
+            console.log('Auto-refresh gepauzeerd vanwege inactief venster');
+          } else if ($scope.layout.autoRefresh) {
+            // Hervat updates wanneer document weer zichtbaar wordt
+            $scope.startAutoRefresh();
+            console.log('Auto-refresh hervat na activeren venster');
+          }
+        }
+      };
 
       // Bij initialisatie
       $scope.$watch('layout.autoRefresh', function(newValue) {
@@ -418,6 +535,22 @@ define([
           $scope.startAutoRefresh();
         } else {
           $scope.stopAutoRefresh();
+        }
+      });
+      
+      // Luisteren naar wijzigingen in refreshIntervalType of refreshInterval
+      $scope.$watchGroup(['layout.refreshIntervalType', 'layout.refreshInterval'], function() {
+        // Herstart autorefresh indien actief om nieuw interval toe te passen
+        if ($scope.layout && $scope.layout.autoRefresh) {
+          $scope.startAutoRefresh();
+        }
+      });
+      
+      // Luisteren naar wijzigingen in animateUpdates of animationDuration
+      $scope.$watchGroup(['layout.animateUpdates', 'layout.animationDuration'], function() {
+        // Update animatie instellingen
+        if ($scope.layout) {
+          self.configureAnimationSettings($scope.layout);
         }
       });
       
@@ -441,7 +574,7 @@ define([
                 
                 // Update markers op basis van nieuwe selecties
                 if (trainData) {
-                  self.updateTrainVisualization(trainData, trainNumbers);
+                  self.updateTrainVisualization(trainData, trainNumbers, $scope.layout);
                 }
                 
                 if ($scope.layout.refreshOnSelection) {
@@ -457,17 +590,19 @@ define([
       }
       
       // Registreer resize handler
-      $(window).on('resize', function() {
-        $scope.handleResize();
-      });
+      $(window).on('resize', $scope.handleResize);
+      
+      // Registreer visibility change handler voor browser tab wisselen
+      $(document).on('visibilitychange', $scope.handleVisibilityChange);
 
       // Opruimen bij verwijderen van de extensie
       $scope.$on('$destroy', function() {
         // Stop automatische verversing
         $scope.stopAutoRefresh();
         
-        // Verwijder resize handler
+        // Verwijder event handlers
         $(window).off('resize', $scope.handleResize);
+        $(document).off('visibilitychange', $scope.handleVisibilityChange);
         
         // Ruim kaart op
         mapRenderer.destroyMap();
