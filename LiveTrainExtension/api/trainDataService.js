@@ -23,7 +23,8 @@ define(['jquery', './apiConfig'], function($, apiConfig) {
      */
     function getRequestHeaders() {
       var headers = {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
       };
       
       // Voeg autorisatie toe als er een API key is geconfigureerd
@@ -46,10 +47,8 @@ define(['jquery', './apiConfig'], function($, apiConfig) {
       // Maak query parameters aan
       var params = Object.assign({}, apiConfig.defaultParams);
       
-      // Voeg treinnummer filter toe als deze is opgegeven
-      if (trainNumbers && trainNumbers.length > 0) {
-        params.trainNumbers = trainNumbers.join(',');
-      }
+      // Voor NS API is geen directe treinnummer filter beschikbaar in de URL
+      // We filteren de resultaten later na ontvangst
       
       // Voer de AJAX request uit
       return $.ajax({
@@ -57,10 +56,16 @@ define(['jquery', './apiConfig'], function($, apiConfig) {
         type: 'GET',
         data: params,
         headers: getRequestHeaders(),
-        timeout: 10000 // 10 seconden timeout
+        timeout: 15000 // 15 seconden timeout voor de NS API
       }).then(function(response) {
         // Reset error teller bij succesvolle call
         errorCount = 0;
+        
+        // Filter resultaten op treinnummers als die zijn opgegeven
+        if (trainNumbers && trainNumbers.length > 0) {
+          return filterByTrainNumbers(response, trainNumbers);
+        }
+        
         return response;
       }).catch(function(error) {
         // Houd bij hoeveel errors er zijn opgetreden
@@ -79,46 +84,107 @@ define(['jquery', './apiConfig'], function($, apiConfig) {
     }
     
     /**
+     * Filtert de API respons op specifieke treinnummers
+     * @param {Object} response - De originele API respons
+     * @param {Array} trainNumbers - Array met treinnummers om te filteren
+     * @returns {Object} Gefilterde respons
+     */
+    function filterByTrainNumbers(response, trainNumbers) {
+      if (!response || !response.payload || !Array.isArray(response.payload.treinen)) {
+        return response;
+      }
+      
+      // Converteer treinnummers naar string voor vergelijking
+      var trainNumberStrings = trainNumbers.map(function(num) {
+        return num.toString();
+      });
+      
+      // Filter de treinen op treinnummer
+      var filteredTrains = response.payload.treinen.filter(function(train) {
+        return trainNumberStrings.indexOf(train.treinNummer.toString()) !== -1;
+      });
+      
+      // Maak een nieuwe response met alleen de gefilterde treinen
+      var filteredResponse = {
+        payload: {
+          treinen: filteredTrains
+        }
+      };
+      
+      return filteredResponse;
+    }
+    
+    /**
      * Transformeert de API respons naar een bruikbaar formaat
      * @param {Object} response - Respons van de API
      * @returns {Array} Array met verwerkte treinlocaties
      */
     function transformAPIResponse(response) {
-      if (!response || !response.data || !Array.isArray(response.data)) {
+      if (!response || !response.payload || !Array.isArray(response.payload.treinen)) {
         return [];
       }
       
-      // Transformeer de data naar een bruikbaar formaat
-      return response.data.map(function(item) {
+      // Transformeer de NS API data naar een bruikbaar formaat
+      return response.payload.treinen.map(function(item) {
+        // Bepaal de status op basis van beschikbare data
+        var status = determineTrainStatus(item);
+        
         // Basis treinobject met informatie
         var train = {
-          id: item.trainNumber || item.id || 'unknown_' + Math.random().toString(36).substr(2, 9),
-          number: item.trainNumber || 'Onbekend',
+          id: item.treinNummer || 'unknown_' + Math.random().toString(36).substr(2, 9),
+          number: item.treinNummer || 'Onbekend',
           position: {
-            lat: parseFloat(item.latitude || 0),
-            lng: parseFloat(item.longitude || 0)
+            lat: parseFloat(item.lat || 0),
+            lng: parseFloat(item.lng || 0)
           },
-          speed: parseFloat(item.speed || 0),
-          heading: parseFloat(item.heading || 0),
-          timestamp: new Date(item.timestamp || Date.now()),
-          status: determineTrainStatus(item),
+          speed: parseFloat(item.snelheid || 0),
+          heading: parseFloat(item.richting || 0),
+          timestamp: new Date(item.tijd || Date.now()),
+          status: status,
           details: {
-            type: item.trainType || 'Onbekend',
-            operator: item.operator || 'Onbekend',
-            origin: item.origin || 'Onbekend',
-            destination: item.destination || 'Onbekend',
-            platform: item.platform || 'Onbekend',
-            delay: parseInt(item.delay || 0, 10)
+            type: item.type || 'Onbekend',
+            operator: item.vervoerder || 'NS',
+            origin: item.herkomst || 'Onbekend',
+            destination: item.bestemming || 'Onbekend',
+            platform: item.spoor || 'Onbekend',
+            delay: calculateDelayInMinutes(item)
           }
         };
         
         // Voeg eventuele extra gegevens toe
-        if (item.extraData) {
-          train.details.extraData = item.extraData;
+        if (item.info) {
+          train.details.info = item.info;
+        }
+        
+        if (item.materieel && Array.isArray(item.materieel)) {
+          train.details.materieel = item.materieel.join(', ');
         }
         
         return train;
       });
+    }
+    
+    /**
+     * Berekent de vertraging in minuten op basis van de API data
+     * @param {Object} trainData - Treingegevens uit de API
+     * @returns {number} Vertraging in minuten
+     */
+    function calculateDelayInMinutes(trainData) {
+      // Als er geen data is of geen vertraging, return 0
+      if (!trainData || !trainData.vertraging) {
+        return 0;
+      }
+      
+      // NS API geeft vertraging als string, bijv. "PT5M" (5 minuten)
+      var delayString = trainData.vertraging;
+      
+      // Extraheer de minuten uit de ISO8601 duration string
+      var minutesMatch = delayString.match(/PT(\d+)M/);
+      if (minutesMatch && minutesMatch[1]) {
+        return parseInt(minutesMatch[1], 10);
+      }
+      
+      return 0;
     }
     
     /**
@@ -132,10 +198,10 @@ define(['jquery', './apiConfig'], function($, apiConfig) {
         return apiConfig.constants.TRAIN_STATUS.UNKNOWN;
       }
       
-      // Bepaal status op basis van vertraging
-      if (trainData.cancelled === true) {
+      // Bepaal status op basis van statusinformatie en vertraging
+      if (trainData.status === 'NIET-GEPLAND') {
         return apiConfig.constants.TRAIN_STATUS.CANCELLED;
-      } else if (trainData.delay && parseInt(trainData.delay, 10) > 0) {
+      } else if (trainData.vertraging) {
         return apiConfig.constants.TRAIN_STATUS.DELAYED;
       } else {
         return apiConfig.constants.TRAIN_STATUS.ON_TIME;
