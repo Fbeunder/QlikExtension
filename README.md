@@ -39,11 +39,25 @@ Om de extensie te laten werken met de NS API, moet u een geldige API key invulle
    ```javascript
    auth: {
      method: 'apiKey',
-     headerName: 'Api-Key',
+     headerName: 'Ocp-Apim-Subscription-Key',  // Opmerking: dit is de juiste header naam voor de NS API
      key: 'UW_API_KEY_HIER' // Vervang met uw eigen API key
    },
    ```
 4. Sla het bestand op
+
+## NS API Informatie
+
+Deze extensie maakt gebruik van de NS Virtual Train API. De API URL is:
+```
+https://gateway.apiportal.ns.nl/virtual-train-api/api/vehicle
+```
+
+De API wordt gebruikt met de volgende standaard parameters:
+- `lat`: Breedtegraad van het centrum van het gebied om treinen te zoeken
+- `lng`: Lengtegraad van het centrum van het gebied om treinen te zoeken
+- `features`: Ingesteld op 'trein' om alleen treinen weer te geven
+
+U kunt deze standaard instellingen wijzigen in het `apiConfig.js` bestand indien nodig.
 
 ## Gebruik
 
