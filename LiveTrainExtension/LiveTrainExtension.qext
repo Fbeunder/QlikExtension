@@ -1,0 +1,15 @@
+{
+  "name": "Live Train Extension",
+  "description": "Een extensie voor het live volgen van treinen in een QlikSense dashboard",
+  "type": "visualization",
+  "version": "1.0.0",
+  "author": "Stan de GitHub Agent",
+  "homepage": "",
+  "keywords": "qlik-sense, visualization, trains, tracking",
+  "license": "",
+  "repository": "",
+  "preview": "assets/preview.png",
+  "dependencies": {
+    "qlik-sense": ">=3.0.0"
+  }
+}
