@@ -105,7 +105,7 @@ LiveTrainExtension/
     * Afhankelijkheden: Geen
 
 ### 3.5 trainDataService.js
-* **Status**: Voltooid
+* **Status**: Voltooid - Bijgewerkt voor integratie met NS-API
 * **Bestandsnaam**: api/trainDataService.js
 * **Functionaliteit**: Service voor het ophalen van treingegevens van externe API's
 * **Belangrijkste functies**:
@@ -129,9 +129,20 @@ LiveTrainExtension/
       * response (Object): API respons object
     * Return waarde: Array met getransformeerde treinlocaties
     * Afhankelijkheden: apiConfig.js
+  * `filterByTrainNumbers(response, trainNumbers)`:
+    * Parameters:
+      * response (Object): De originele API respons
+      * trainNumbers (Array): Array met treinnummers om te filteren
+    * Return waarde: Gefilterde respons object
+    * Afhankelijkheden: Geen
+  * `calculateDelayInMinutes(trainData)`:
+    * Parameters:
+      * trainData (Object): Treingegevens uit de API
+    * Return waarde: Number met de vertraging in minuten
+    * Afhankelijkheden: Geen
 
 ### 3.6 apiConfig.js
-* **Status**: Voltooid
+* **Status**: Voltooid - Bijgewerkt voor correcte NS-API configuratie
 * **Bestandsnaam**: api/apiConfig.js
 * **Functionaliteit**: Configuratie voor API-endpoints en authenticatie
 * **Belangrijkste functies**: 
@@ -283,13 +294,13 @@ Voltooide modules:
 - LiveTrainExtension.qext
 - initialProperties.js (uitgebreid met standaardwaarden voor dynamische updates)
 - propertyPanel.js (uitgebreid met configuratie-opties voor dynamische updates en animatie)
-- api/trainDataService.js
-- api/apiConfig.js
+- api/trainDataService.js (bijgewerkt voor integratie met NS-API)
+- api/apiConfig.js (bijgewerkt voor correcte NS-API configuratie)
 - ui/mapRenderer.js
 - ui/trainVisualizer.js (uitgebreid met animatie en update-indicator functionaliteit)
 - lib/css/style.css (bijgewerkt met styling voor dynamische updates, animaties en toggle controls)
 - lib/js/qlik-style.js
-- README.md (bijgewerkt met duidelijke instructies voor API Key configuratie)
+- README.md (bijgewerkt met duidelijke instructies voor NS-API configuratie)
 
 Alle modules zijn nu volledig geïmplementeerd en geïntegreerd. De extensie beschikt over alle gewenste functionaliteit, inclusief real-time updates, vloeiende animaties en gebruikersvriendelijke configuratiemogelijkheden.
 
@@ -303,16 +314,17 @@ Alle modules zijn nu volledig geïmplementeerd en geïntegreerd. De extensie bes
 5. ✅ Visualisatie van treinen op de kaart
 6. ✅ Dynamische updates van treinposities
 7. ✅ API Key configuratie instructies in de documentatie
+8. ✅ Correcte implementatie van NS-API integratie
 
 Alle must-have functionaliteiten zijn nu geïmplementeerd. De extensie is volledig functioneel en klaar voor gebruik in productieomgevingen. Verdere verbeteringen zouden nice-to-have verbeteringen zijn die de gebruikerservaring verder kunnen verbeteren.
 
 ### Nice-to-haves:
-1. Aanpasbare verversingsfrequentie van treingegevens via het eigenschappen paneel (✅ geïmplementeerd)
+1. ✅ Aanpasbare verversingsfrequentie van treingegevens via het eigenschappen paneel (geïmplementeerd)
 2. Mogelijkheid om verschillende kaartlagen te tonen/verbergen
 3. Historische weergave van treinbewegingen
-4. Extra informatie tonen bij klikken op een trein (vertraging, bestemming, etc.) (✅ geïmplementeerd)
-5. Kleurcodering van treinen op basis van status (op tijd, vertraagd, etc.) (✅ geïmplementeerd)
-6. Animatie van treinbewegingen op de kaart (✅ geïmplementeerd)
+4. ✅ Extra informatie tonen bij klikken op een trein (vertraging, bestemming, etc.) (geïmplementeerd)
+5. ✅ Kleurcodering van treinen op basis van status (op tijd, vertraagd, etc.) (geïmplementeerd)
+6. ✅ Animatie van treinbewegingen op de kaart (geïmplementeerd)
 7. Uitgebreidere configuratiemogelijkheden voor de visuele weergave
 8. Prestatieoptimalisaties voor grote hoeveelheden treingegevens
 
