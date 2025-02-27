@@ -217,3 +217,217 @@ define([
       // Pas thema toe op basis van Qlik Sense thema
       mapRenderer.applyQlikTheme();
     },
+    
+    /**
+     * Haalt geselecteerde treinnummers op uit de hypercube
+     * @param {Object} layout - Layout object
+     * @returns {Array} Array van geselecteerde treinnummers
+     */
+    getSelectedTrainNumbers: function(layout) {
+      var trainNumbers = [];
+      
+      // Controleer of we een hypercube hebben met data
+      if (layout.qHyperCube && 
+          layout.qHyperCube.qDataPages && 
+          layout.qHyperCube.qDataPages.length > 0 &&
+          layout.qHyperCube.qDataPages[0].qMatrix) {
+          
+        // Haal alle waarden op
+        var matrix = layout.qHyperCube.qDataPages[0].qMatrix;
+        
+        // Extraheer treinnummers waarbij we controleren op geldige waarden
+        trainNumbers = matrix.map(function(row) {
+          return row[0].qText;  // Aanname: eerste kolom bevat treinnummer
+        }).filter(function(value) {
+          return value !== undefined && value !== null && value !== '';
+        });
+      }
+      
+      return trainNumbers;
+    },
+    
+    /**
+     * Selecteert een treinnummer in Qlik Sense
+     * @param {string} trainId - Treinnummer om te selecteren 
+     * @param {boolean} multiSelect - Of meerdere selecties moeten worden toegestaan
+     */
+    selectTrain: function(trainId, multiSelect) {
+      var self = this;
+      var app = qlik.currApp();
+      
+      // Haal het veld op uit de layout
+      var field = app.field('Train Number'); // Standaard veldnaam aanname
+      
+      // Als we een specifiek veld hebben geconfigureerd, gebruik dat
+      if (self.$scope && 
+          self.$scope.layout && 
+          self.$scope.layout.qHyperCube && 
+          self.$scope.layout.qHyperCube.qDimensionInfo &&
+          self.$scope.layout.qHyperCube.qDimensionInfo.length > 0) {
+        
+        var fieldName = self.$scope.layout.qHyperCube.qDimensionInfo[0].qFallbackTitle;
+        if (fieldName) {
+          field = app.field(fieldName);
+        }
+      }
+      
+      // Selecteer de waarde in het veld
+      if (field) {
+        if (!multiSelect) {
+          // Begin met wissen van eerdere selecties als we niet in multiselect modus zijn
+          field.clear();
+        }
+        
+        // Selecteer de waarde
+        field.selectValues([{
+          qText: trainId
+        }], true, true);
+      }
+    },
+    
+    /**
+     * Wist alle actieve selecties
+     */
+    clearSelections: function() {
+      var app = qlik.currApp();
+      app.clearAll();
+    },
+    
+    /**
+     * Ververst de treingegevens en updatet de UI
+     * @param {Array} trainNumbers - Array met treinnummers om te filteren
+     * @param {jQuery} $element - jQuery element om te updaten
+     */
+    refreshTrainData: function(trainNumbers, $element) {
+      var self = this;
+      
+      // Toon laden indicator
+      $element.find('.train-data-section').html('<p>Treingegevens worden opgehaald...</p>');
+      
+      // Haal de traingegevens op
+      trainDataService.getTrainLocations(trainNumbers)
+        .then(function(data) {
+          // Herrender de extensie om de nieuwe gegevens te tonen
+          self.paint($element, self.$scope.layout);
+        })
+        .catch(function(error) {
+          // Toon foutmelding
+          $element.find('.train-data-section').html(
+            '<div class="error-message">' +
+            '<p>Er is een fout opgetreden bij het ophalen van de treingegevens:</p>' +
+            '<p>' + error.message + '</p>' +
+            '</div>'
+          );
+        });
+    },
+    
+    controller: ['$scope', '$element', function($scope, $element) {
+      // Referentie naar de scope voor hergebruik
+      this.$scope = $scope;
+      var self = this;
+      
+      /**
+       * Haalt treingegevens op en verwerkt ze
+       * @param {Array} trainNumbers - Optionele lijst met treinnummers
+       */
+      $scope.getTrainData = function(trainNumbers) {
+        trainDataService.getTrainLocations(trainNumbers)
+          .then(function(data) {
+            console.log('Treingegevens opgehaald:', data);
+            // Data is nu beschikbaar in de service cache
+          })
+          .catch(function(error) {
+            console.error('Fout bij ophalen treingegevens:', error);
+          });
+      };
+      
+      /**
+       * Start automatische verversing
+       */
+      $scope.startAutoRefresh = function() {
+        // Verversingsinterval ophalen uit layout (of standaard 30 seconden)
+        var refreshInterval = $scope.layout.refreshInterval || 30;
+        
+        // Start verversing met callback
+        trainDataService.startAutoRefresh(function(data) {
+          // Bij elke update de extensie opnieuw renderen
+          $scope.$apply(function() {
+            $element.scope().object.paint($element, $scope.layout);
+          });
+        }, refreshInterval);
+      };
+      
+      /**
+       * Stop automatische verversing
+       */
+      $scope.stopAutoRefresh = function() {
+        trainDataService.stopAutoRefresh();
+      };
+      
+      /**
+       * Handler voor wijzigingen in venstergrootte
+       */
+      $scope.handleResize = function() {
+        // Pas de kaartgrootte aan
+        mapRenderer.resizeMap();
+      };
+
+      // Bij initialisatie
+      $scope.$watch('layout.autoRefresh', function(newValue) {
+        // Start of stop automatische verversing op basis van de instellingen
+        if (newValue) {
+          $scope.startAutoRefresh();
+        } else {
+          $scope.stopAutoRefresh();
+        }
+      });
+      
+      // Luisteren naar wijzigingen in selecties
+      if ($scope.layout && $scope.layout.refreshOnSelection) {
+        $scope.backendApi.getProperties().then(function(reply) {
+          var dimensions = reply.qHyperCubeDef.qDimensions || [];
+          if (dimensions.length > 0) {
+            var fieldName = dimensions[0].qDef.qFieldDefs[0];
+            fieldName = fieldName.replace(/[\[\]]/g, ''); // Verwijder eventuele haakjes
+            
+            // Monitor selecties voor dit veld
+            var app = qlik.currApp();
+            var field = app.field(fieldName);
+            
+            if (field) {
+              field.OnData.bind(function() {
+                // Ververs gegevens als er een selectie wijziging is
+                var trainNumbers = self.getSelectedTrainNumbers($scope.layout);
+                if ($scope.layout.refreshOnSelection) {
+                  self.refreshTrainData(trainNumbers, $element);
+                } else {
+                  // Alleen UI verversen zonder nieuwe data op te halen
+                  self.paint($element, $scope.layout);
+                }
+              });
+            }
+          }
+        });
+      }
+      
+      // Registreer resize handler
+      $(window).on('resize', function() {
+        $scope.handleResize();
+      });
+
+      // Opruimen bij verwijderen van de extensie
+      $scope.$on('$destroy', function() {
+        // Stop automatische verversing
+        $scope.stopAutoRefresh();
+        
+        // Verwijder resize handler
+        $(window).off('resize', $scope.handleResize);
+        
+        // Ruim kaart op
+        mapRenderer.destroyMap();
+        
+        console.log('Extensie wordt verwijderd, opruimen...');
+      });
+    }]
+  };
+});
