@@ -277,16 +277,68 @@
 /* Marker popups */
 .train-popup {
   font-size: 12px;
+  padding: 5px;
+  max-width: 220px;
 }
 
 .train-popup h4 {
   margin: 0 0 5px 0;
   font-size: 14px;
   font-weight: bold;
+  color: #333;
 }
 
 .train-popup p {
-  margin: 2px 0;
+  margin: 3px 0;
+  font-size: 12px;
+  color: #555;
+}
+
+.train-popup .on-time {
+  color: #009845;
+  font-weight: bold;
+}
+
+.train-popup .delayed {
+  color: #e67e22;
+  font-weight: bold;
+}
+
+.train-popup .cancelled {
+  color: #e74c3c;
+  font-weight: bold;
+}
+
+/* Popup pijl styling */
+.leaflet-popup-tip {
+  background-color: white;
+}
+
+.dark-theme-map .leaflet-popup-content-wrapper,
+.dark-theme-map .leaflet-popup-tip {
+  background-color: #333;
+  color: #eee;
+  border-color: #444;
+}
+
+.dark-theme-map .leaflet-popup-content-wrapper h4 {
+  color: white;
+}
+
+.dark-theme-map .leaflet-popup-content-wrapper p {
+  color: #ccc;
+}
+
+.dark-theme-map .train-popup .on-time {
+  color: #2ecc71;
+}
+
+.dark-theme-map .train-popup .delayed {
+  color: #f39c12;
+}
+
+.dark-theme-map .train-popup .cancelled {
+  color: #e74c3c;
 }
 
 /* Selectie modus markering */
@@ -318,6 +370,81 @@
 
 .selection-notification.visible {
   opacity: 1;
+}
+
+/* Animatie voor verversing */
+@keyframes pulse-marker {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.3);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.pulse-animation {
+  animation: pulse-marker 1s ease-in-out;
+}
+
+/* Legenda */
+.train-legend {
+  background-color: rgba(255, 255, 255, 0.9);
+  padding: 10px;
+  border-radius: 5px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  position: absolute;
+  bottom: 20px;
+  right: 10px;
+  z-index: 1000;
+  font-size: 11px;
+}
+
+.dark-theme-map .train-legend {
+  background-color: rgba(50, 50, 50, 0.9);
+  color: white;
+}
+
+.train-legend h5 {
+  margin: 0 0 5px 0;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 3px;
+}
+
+.legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 5px;
+  border: 1px solid #fff;
+}
+
+.legend-color.on-time {
+  background-color: #009845;
+}
+
+.legend-color.delayed {
+  background-color: #e67e22;
+}
+
+.legend-color.cancelled {
+  background-color: #e74c3c;
+}
+
+.legend-color.unknown {
+  background-color: #7f8c8d;
+}
+
+.legend-color.selected {
+  background-color: #ff3333;
 }
 
 /* Media queries voor responsieve weergave */
