@@ -208,60 +208,8 @@ define(['jquery', './apiConfig'], function($, apiConfig) {
       }
     }
     
-    /**
-     * Start de automatische verversing van treingegevens
-     * @param {Function} callback - Functie die wordt aangeroepen bij elke update
-     * @param {number} interval - Interval in milliseconden (min 5000)
-     */
-    function startAutoRefresh(callback, interval) {
-      // Stop eerst eventuele bestaande timer
-      stopAutoRefresh();
-      
-      // Valideer de interval
-      var refreshInterval = Math.max(
-        apiConfig.constants.REFRESH_INTERVALS.MINIMUM,
-        interval || apiConfig.constants.REFRESH_INTERVALS.DEFAULT
-      );
-      
-      // Start nieuwe timer voor automatische updates
-      refreshTimer = setInterval(function() {
-        // Voorkom overlappende verversingen
-        if (isRefreshing) {
-          return;
-        }
-        
-        isRefreshing = true;
-        
-        // Direct gegevens ophalen zonder filter
-        getTrainLocations()
-          .then(function(data) {
-            isRefreshing = false;
-            if (typeof callback === 'function') {
-              callback(data);
-            }
-          })
-          .catch(function(error) {
-            isRefreshing = false;
-            console.error('Error during auto refresh:', error);
-          });
-      }, refreshInterval);
-      
-      console.log('Auto refresh started with interval: ' + refreshInterval + 'ms');
-    }
-    
-    /**
-     * Stopt de automatische verversing van treingegevens
-     */
-    function stopAutoRefresh() {
-      if (refreshTimer) {
-        clearInterval(refreshTimer);
-        refreshTimer = null;
-        console.log('Auto refresh stopped');
-      }
-    }
-    
-    // Publieke methoden
-    return {
+    // Maak een publieke methode voor getTrainLocations zodat deze in de private functies kan worden gebruikt
+    var publicApi = {
       /**
        * Haalt de meest recente treinlocatie gegevens op
        * @param {Array} trainNumbers - Optionele array met treinnummers om te filteren
@@ -331,6 +279,61 @@ define(['jquery', './apiConfig'], function($, apiConfig) {
         apiConfig.configure(options);
       }
     };
+    
+    /**
+     * Start de automatische verversing van treingegevens
+     * @param {Function} callback - Functie die wordt aangeroepen bij elke update
+     * @param {number} interval - Interval in milliseconden (min 5000)
+     */
+    function startAutoRefresh(callback, interval) {
+      // Stop eerst eventuele bestaande timer
+      stopAutoRefresh();
+      
+      // Valideer de interval
+      var refreshInterval = Math.max(
+        apiConfig.constants.REFRESH_INTERVALS.MINIMUM,
+        interval || apiConfig.constants.REFRESH_INTERVALS.DEFAULT
+      );
+      
+      // Start nieuwe timer voor automatische updates
+      refreshTimer = setInterval(function() {
+        // Voorkom overlappende verversingen
+        if (isRefreshing) {
+          return;
+        }
+        
+        isRefreshing = true;
+        
+        // Direct gegevens ophalen zonder filter
+        // Hier gebruiken we de publieke methode via publicApi om de ReferenceError op te lossen
+        publicApi.getTrainLocations()
+          .then(function(data) {
+            isRefreshing = false;
+            if (typeof callback === 'function') {
+              callback(data);
+            }
+          })
+          .catch(function(error) {
+            isRefreshing = false;
+            console.error('Error during auto refresh:', error);
+          });
+      }, refreshInterval);
+      
+      console.log('Auto refresh started with interval: ' + refreshInterval + 'ms');
+    }
+    
+    /**
+     * Stopt de automatische verversing van treingegevens
+     */
+    function stopAutoRefresh() {
+      if (refreshTimer) {
+        clearInterval(refreshTimer);
+        refreshTimer = null;
+        console.log('Auto refresh stopped');
+      }
+    }
+    
+    return publicApi;
   }();
   
   return trainDataService;
