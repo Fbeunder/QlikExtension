@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <!-- Bootstrap CSS voor een responsive layout -->
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <!-- Leaflet CSS (integrity-attribuut verwijderd) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    #map { 
+      height: calc(100% - 100px);  /* ruimte voor de controls bovenaan */
+      width: 100%;
+    }
+    .controls {
+      padding: 0.5rem;
+      background: #f8f9fa;
+    }
+    @media (min-width: 576px) {
+      .controls { 
+        display: flex; 
+        align-items: center; 
+        flex-wrap: wrap;
+      }
+      .controls .form-group { margin-right: 1rem; }
+    }
+    /* Marker highlight in volgmodus */
+    .follow-marker { filter: hue-rotate(120deg) saturate(150%); }
+    /* Knop om alle treinen te tonen */
+    #btnShowAll {
+      margin-left: auto;
+      display: none;
+    }
+    /* Status-info styling */
+    .status-info {
+      margin-left: 1rem;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <!-- Controlepaneel met zoekvelden en statusinformatie -->
+  <div class="controls">
+    <div class="form-group mb-2">
+      <label for="filterNumber" class="sr-only">Treinnummer</label>
+      <input type="text" id="filterNumber" class="form-control" placeholder="Zoek op treinnummer">
+    </div>
+    <div class="form-group mb-2">
+      <label for="filterLocation" class="sr-only">Locatie</label>
+      <input type="text" id="filterLocation" class="form-control" placeholder="Zoek op locatie">
+    </div>
+    <div class="status-info mb-2">
+      <span id="trainCount">Aantal treinen: 0</span> | 
+      <span id="apiStatus">API status: onbekend</span>
+    </div>
+    <button id="btnShowAll" class="btn btn-secondary btn-sm">Toon alle treinen</button>
+  </div>
+
+  <!-- Container voor de kaart -->
+  <div id="map"></div>
+
+  <!-- Leaflet JS (integrity-attribuut verwijderd) -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // Initialiseer de kaart met een centraal Nederland perspectief
+    var map = L.map('map').setView([52.1, 5.2], 8);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap',
+      maxZoom: 18
+    }).addTo(map);
+
+    // Globale variabelen
+    var markers = {};          // Alle markers, gesorteerd op ritId
+    var trainData = [];        // Laatste dataset van treinen
+    var followedTrainId = null; // RitId van de trein die gevolgd wordt
+
+    // Update-fetchinterval (normaal en bij volgmodus)
+    var normalFetchInterval = 5000; // 5 seconden
+    var fastFetchInterval = 1000;   // 1 seconde
+    var fetchTimer = null;
+    startFetchTimer(normalFetchInterval);
+
+    function startFetchTimer(interval) {
+      if (fetchTimer) clearInterval(fetchTimer);
+      fetchTimer = setInterval(fetchTrainData, interval);
+    }
+
+    // Functie voor het bepalen van een icon op basis van delay
+    function getDelayIcon(delay) {
+      let color;
+      if (delay < 60) {
+        color = '#007bff'; // blauw
+      } else if (delay < 180) {
+        color = '#ff9800'; // oranje
+      } else {
+        color = '#ff0000'; // rood
+      }
+      return L.divIcon({
+        className: 'custom-marker',
+        html: `<div style="background-color: ${color}; width: 24px; height: 24px; border-radius: 50%; border: 2px solid white;"></div>`,
+        iconSize: [24, 24],
+        iconAnchor: [12, 12]
+      });
+    }
+
+    // Maak of update een marker voor een trein (basisgegevens)
+    function renderTrainMarker(train) {
+      var id = train.ritId;
+      var marker = markers[id];
+      if (!marker) {
+        marker = L.marker([train.lat, train.lng], { title: 'Trein ' + train.treinNummer })
+          .addTo(map)
+          .bindPopup(`🚆 <b>Trein ${train.treinNummer}</b><br>Type: ${train.type}<br>Snelheid: ${train.snelheid} km/u`);
+        marker.on('click', function() {
+          followTrain(id);
+        });
+        markers[id] = marker;
+      } else {
+        marker.setLatLng([train.lat, train.lng]);
+        // Basis popup, journey info wordt later toegevoegd
+        marker.getPopup().setContent(`🚆 <b>Trein ${train.treinNummer}</b><br>Type: ${train.type}<br>Snelheid: ${train.snelheid} km/u`);
+      }
+      return marker;
+    }
+
+    // Asynchrone functie: haal journey-details op en update marker
+    async function fetchAndUpdateJourney(train) {
+      try {
+        let journeyRes = await fetch("https://script.google.com/macros/s/AKfycbyGbGRas6dTNB8aFcv7Z62kNpq6RRdEanjkrvXXX9rHihmFV-Wy-oBrM_GqXbN0FNgP/exec?action=getJourney&train=" + train.treinNummer);
+        if (!journeyRes.ok) throw new Error("Journey request failed: " + journeyRes.status);
+        let journeyData = await journeyRes.json();
+        console.log("Journey data for train", train.treinNummer, ":", journeyData);
+        if (markers[train.ritId]) {
+          // Bepaal nieuw icon op basis van delay
+          let newIcon = getDelayIcon(journeyData.delayInSeconds);
+          markers[train.ritId].setIcon(newIcon);
+          // Update popup: voeg journey-info toe
+          let baseContent = `🚆 <b>Trein ${train.treinNummer}</b><br>Type: ${train.type}<br>Snelheid: ${train.snelheid} km/u`;
+          let journeyContent = `<br>Next stop: ${journeyData.nextStopDestination} | Delay: ${journeyData.delayInSeconds} sec`;
+          markers[train.ritId].getPopup().setContent(baseContent + journeyContent);
+        }
+      } catch(error) {
+        console.error("Error fetching journey details for train", train.treinNummer, error);
+      }
+    }
+
+    // Activeer volgmodus voor een specifieke trein (we tonen dan alleen deze trein)
+    function followTrain(trainId) {
+      followedTrainId = trainId;
+      startFetchTimer(fastFetchInterval);  // Zet updatefrequentie op 1 sec
+      Object.keys(markers).forEach(id => {
+        if (id == trainId) {
+          var el = markers[id].getElement();
+          if (el) el.classList.add('follow-marker');
+          markers[id].openPopup();
+          map.setView(markers[id].getLatLng(), 12);
+        } else {
+          if (map.hasLayer(markers[id])) {
+            map.removeLayer(markers[id]);
+          }
+        }
+      });
+      document.getElementById('btnShowAll').style.display = 'inline-block';
+      // Haal journey-details op voor de geselecteerde trein
+      var trainObj = trainData.find(t => String(t.ritId) === String(trainId));
+      if (trainObj) {
+        fetchAndUpdateJourney(trainObj);
+      }
+    }
+
+    // Schakel volgmodus uit en herstel normale fetch-frequentie en toon alle markers
+    function showAllTrains() {
+      followedTrainId = null;
+      startFetchTimer(normalFetchInterval);
+      Object.keys(markers).forEach(id => {
+        if (!map.hasLayer(markers[id])) {
+          markers[id].addTo(map);
+        }
+        var el = markers[id].getElement();
+        if (el) el.classList.remove('follow-marker');
+      });
+      document.getElementById('btnShowAll').style.display = 'none';
+    }
+    document.getElementById('btnShowAll').onclick = showAllTrains;
+
+    // Filter de weergegeven treinen op basis van de ingevoerde zoekcriteria
+    function applyFilters() {
+      var numFilter = document.getElementById('filterNumber').value.trim().toLowerCase();
+      var locFilter = document.getElementById('filterLocation').value.trim().toLowerCase();
+      trainData.forEach(train => {
+        var idStr = String(train.treinNummer).toLowerCase();
+        var matches = true;
+        if (numFilter && idStr.indexOf(numFilter) === -1) {
+          matches = false;
+        }
+        if (!matches) {
+          if (markers[train.ritId] && map.hasLayer(markers[train.ritId])) {
+            map.removeLayer(markers[train.ritId]);
+          }
+        } else {
+          if (markers[train.ritId] && !map.hasLayer(markers[train.ritId])) {
+            markers[train.ritId].addTo(map);
+          }
+        }
+      });
+    }
+    document.getElementById('filterNumber').addEventListener('input', applyFilters);
+    document.getElementById('filterLocation').addEventListener('input', applyFilters);
+
+    // Update de kaart en statusinformatie met de nieuwste data
+    function updateMapData(data) {
+      trainData = data;
+      document.getElementById('trainCount').textContent = 'Aantal treinen: ' + data.length;
+      document.getElementById('apiStatus').textContent = 'API status: OK';
+
+      data.forEach(train => {
+        if (followedTrainId && train.ritId !== followedTrainId) return;
+        if (!followedTrainId) {
+          var idStr = String(train.treinNummer).toLowerCase();
+          var numFilter = document.getElementById('filterNumber').value.trim().toLowerCase();
+          if (numFilter && idStr.indexOf(numFilter) === -1) return;
+        }
+        renderTrainMarker(train);
+      });
+      // Verwijder markers die niet meer in de data zitten
+      Object.keys(markers).forEach(id => {
+        if (followedTrainId && id != followedTrainId) return;
+        var stillThere = data.find(t => String(t.ritId) === id);
+        if (!stillThere && map.hasLayer(markers[id])) {
+          map.removeLayer(markers[id]);
+        }
+      });
+      // Voor elk van de treinen: haal journey-details op en update marker (voor alle treinen)
+      data.forEach(train => {
+        fetchAndUpdateJourney(train);
+      });
+    }
+
+    // Haal data op van de backend via fetch (eventueel met trainId-parameter)
+    async function fetchTrainData() {
+      try {
+        var fetchUrl = "https://script.google.com/macros/s/AKfycbyGbGRas6dTNB8aFcv7Z62kNpq6RRdEanjkrvXXX9rHihmFV-Wy-oBrM_GqXbN0FNgP/exec?action=getData";
+        if (followedTrainId) {
+          fetchUrl += "&trainId=" + followedTrainId;
+        }
+        let res = await fetch(fetchUrl);
+        if (!res.ok) throw new Error("Request failed: " + res.status);
+        let data = await res.json();
+        console.log("Ontvangen data:", data);
+        updateMapData(data);
+      } catch(err) {
+        console.error("Fout bij ophalen treingegevens:", err);
+        document.getElementById('apiStatus').textContent = "API status: Fout (" + err.message + ")";
+      }
+    }
+    // Eerste load
+    fetchTrainData();
+  </script>
+</body>
+</html>
