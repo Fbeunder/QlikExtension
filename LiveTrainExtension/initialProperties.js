@@ -15,20 +15,36 @@ define([], function() {
         qHeight: 50
       }]
     },
-    // Standaard verversingsfrequentie in seconden
-    refreshInterval: 30,
-    // Standaard kaart zoom niveau
+    
+    // Interactie instellingen
+    selectionMode: 'click',
+    allowSelectionFromMap: true,
+    bidirectionalSelection: true,
+    highlightSelectedTrains: true,
+    
+    // Kaart instellingen
     defaultZoom: 7,
-    // Kaart centreren op Nederland
     defaultCenter: {
       lat: 52.1326,
       lng: 5.2913
     },
-    // Moet de extensie automatisch verversen?
-    autoRefresh: true,
-    // Moet de kaart volgen op geselecteerde treinen?
     followSelectedTrains: true,
-    // Maximum aantal treinen om te tonen
-    maxTrainsToShow: 50
+    maxTrainsToShow: 50,
+    
+    // Update instellingen
+    autoRefresh: true,
+    refreshIntervalType: 'normal', // 'fast', 'normal', 'slow', 'custom'
+    refreshInterval: 15, // Seconden
+    pauseRefreshWhenNotVisible: true,
+    refreshOnSelection: true,
+    showUpdateIndicator: true,
+    
+    // Animatie instellingen
+    animateUpdates: true,
+    animationDuration: 1000, // Milliseconden
+    
+    // Data instellingen
+    maxResults: 100,
+    filterBySelection: false
   };
 });
