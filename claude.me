@@ -28,7 +28,7 @@ LiveTrainExtension/
 ## 3. Modules
 
 ### 3.1 LiveTrainExtension.js
-* **Status**: Voltooid - Basisimplementatie
+* **Status**: Voltooid - Geïntegreerd met trainDataService
 * **Bestandsnaam**: LiveTrainExtension.js
 * **Functionaliteit**: Hoofdmodule die de extensie initialiseert en integreert met Qlik Sense
 * **Belangrijkste functies**:
@@ -37,11 +37,17 @@ LiveTrainExtension/
       * element (HTMLElement): DOM element waar de visualisatie in geplaatst wordt
       * layout (Object): Layout configuratie van Qlik Sense
     * Return waarde: Belofte die wordt opgelost wanneer het tekenen is voltooid
-    * Afhankelijkheden: mapRenderer.js, trainVisualizer.js
+    * Afhankelijkheden: trainDataService.js, apiConfig.js
+  * `refreshTrainData(trainNumbers, $element)`: 
+    * Parameters: 
+      * trainNumbers (Array): Lijst met treinnummers om te filteren
+      * $element (jQuery): jQuery element om te updaten
+    * Return waarde: Geen
+    * Afhankelijkheden: trainDataService.js
   * `controller()`: 
     * Parameters: Geen
     * Return waarde: Controller object
-    * Afhankelijkheden: Geen
+    * Afhankelijkheden: trainDataService.js, apiConfig.js
 
 ### 3.2 LiveTrainExtension.qext
 * **Status**: Voltooid
@@ -66,7 +72,7 @@ LiveTrainExtension/
     * Afhankelijkheden: Geen
 
 ### 3.5 trainDataService.js
-* **Status**: Niet gestart
+* **Status**: Voltooid
 * **Bestandsnaam**: api/trainDataService.js
 * **Functionaliteit**: Service voor het ophalen van treingegevens van externe API's
 * **Belangrijkste functies**:
@@ -75,12 +81,37 @@ LiveTrainExtension/
       * trainNumbers (Array): Lijst met treinnummers om te filteren
     * Return waarde: Belofte met treinlocatie gegevens
     * Afhankelijkheden: apiConfig.js
+  * `startAutoRefresh(callback, intervalSeconds)`: 
+    * Parameters: 
+      * callback (Function): Functie die wordt aangeroepen bij elke update
+      * intervalSeconds (number): Verversingsinterval in seconden
+    * Return waarde: Geen
+    * Afhankelijkheden: apiConfig.js
+  * `stopAutoRefresh()`: 
+    * Parameters: Geen
+    * Return waarde: Geen
+    * Afhankelijkheden: Geen
+  * `transformAPIResponse(response)`: 
+    * Parameters: 
+      * response (Object): API respons object
+    * Return waarde: Array met getransformeerde treinlocaties
+    * Afhankelijkheden: apiConfig.js
 
 ### 3.6 apiConfig.js
-* **Status**: Niet gestart
+* **Status**: Voltooid
 * **Bestandsnaam**: api/apiConfig.js
 * **Functionaliteit**: Configuratie voor API-endpoints en authenticatie
-* **Belangrijkste functies**: N.v.t. (exporteert alleen configuratie)
+* **Belangrijkste functies**: 
+  * `buildUrl(endpoint)`: 
+    * Parameters: 
+      * endpoint (string): Relatieve endpoint path
+    * Return waarde: Volledige API URL
+    * Afhankelijkheden: Geen
+  * `configure(options)`: 
+    * Parameters: 
+      * options (Object): Configuratie opties
+    * Return waarde: Geen
+    * Afhankelijkheden: Geen
 
 ### 3.7 mapRenderer.js
 * **Status**: Niet gestart
@@ -107,7 +138,7 @@ LiveTrainExtension/
     * Afhankelijkheden: mapRenderer.js
 
 ### 3.9 style.css
-* **Status**: Voltooid - Basisimplementatie
+* **Status**: Voltooid - Bijgewerkt met styling voor treingegevens
 * **Bestandsnaam**: lib/css/style.css
 * **Functionaliteit**: Stylesheet voor de extensie
 * **Belangrijkste functies**: N.v.t. (CSS bestand)
@@ -130,16 +161,16 @@ LiveTrainExtension/
 
 ## 4. Status
 Voltooide modules:
-- LiveTrainExtension.js (basisimplementatie)
+- LiveTrainExtension.js (geïntegreerd met trainDataService)
 - LiveTrainExtension.qext
 - initialProperties.js
 - propertyPanel.js
-- lib/css/style.css (basisimplementatie)
+- api/trainDataService.js
+- api/apiConfig.js
+- lib/css/style.css (bijgewerkt met styling voor treingegevens)
 - lib/js/qlik-style.js
 
 Nog te implementeren modules:
-- api/trainDataService.js
-- api/apiConfig.js
 - ui/mapRenderer.js
 - ui/trainVisualizer.js
 
@@ -147,8 +178,8 @@ Nog te implementeren modules:
 
 ### Must-haves:
 1. ✅ Basisstructuur opzetten van de Qlik extensie
-2. 🔄 Implementatie van de trainDataService voor het ophalen van treingegevens (Issue #2)
-3. Integratie met Qlik Sense velden voor filteren op treinnummers
+2. ✅ Implementatie van de trainDataService voor het ophalen van treingegevens (Issue #2)
+3. 🔄 Integratie met Qlik Sense velden voor filteren op treinnummers (Issue #3)
 4. Basisimplementatie van mapRenderer voor kaartweergave
 5. Visualisatie van treinen op de kaart
 6. Dynamische updates van treinposities
@@ -159,3 +190,5 @@ Nog te implementeren modules:
 3. Historische weergave van treinbewegingen
 4. Extra informatie tonen bij klikken op een trein (vertraging, bestemming, etc.)
 5. Kleurcodering van treinen op basis van status (op tijd, vertraagd, etc.)
+
+Alle bovenstaande must-haves zijn nodig voor de basiswerking van de applicatie. De nice-to-haves zijn verbeteringen die later kunnen worden toegevoegd om de functionaliteit en gebruikerservaring te verbeteren.
