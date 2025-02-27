@@ -1,0 +1,127 @@
+# QlikExtension - Live Treinen Volgen
+
+## 1. Projectoverzicht
+Dit project betreft een Qlik Sense extensie waarmee gebruikers real-time treinen kunnen volgen in een dashboard. De extensie maakt gebruik van externe API's om treinlocaties op te halen en weer te geven, en kan gefilterd worden op basis van treinnummers die in de Qlik Sense applicatie aanwezig zijn.
+
+## 2. Architectuur
+De extensie volgt de standaard Qlik Sense extensie structuur:
+
+```
+LiveTrainExtension/
+├── LiveTrainExtension.js         # Hoofdmodule voor de extensie
+├── LiveTrainExtension.qext       # Qlik extensie metadata bestand
+├── initialProperties.js          # Initiële eigenschappen configuratie
+├── propertyPanel.js              # Configuratie van het eigenschappen paneel
+├── api/
+│   ├── trainDataService.js       # Service voor het ophalen van treingegevens
+│   └── apiConfig.js              # API configuratie en endpoints
+├── ui/
+│   ├── mapRenderer.js            # Verantwoordelijk voor het weergeven van de kaart
+│   └── trainVisualizer.js        # Functionaliteit voor het visualiseren van treinen op de kaart
+└── lib/                          # Externe bibliotheken
+    ├── leaflet/                  # Map visualisatie bibliotheek
+    └── other-libs/               # Overige benodigde externe bibliotheken
+```
+
+## 3. Modules
+
+### 3.1 LiveTrainExtension.js
+* **Status**: Niet gestart
+* **Bestandsnaam**: LiveTrainExtension.js
+* **Functionaliteit**: Hoofdmodule die de extensie initialiseert en integreert met Qlik Sense
+* **Belangrijkste functies**:
+  * `paint(element, layout)`: 
+    * Parameters: 
+      * element (HTMLElement): DOM element waar de visualisatie in geplaatst wordt
+      * layout (Object): Layout configuratie van Qlik Sense
+    * Return waarde: Belofte die wordt opgelost wanneer het tekenen is voltooid
+    * Afhankelijkheden: mapRenderer.js, trainVisualizer.js
+  * `controller()`: 
+    * Parameters: Geen
+    * Return waarde: Controller object
+    * Afhankelijkheden: Geen
+
+### 3.2 LiveTrainExtension.qext
+* **Status**: Niet gestart
+* **Bestandsnaam**: LiveTrainExtension.qext
+* **Functionaliteit**: Metadata bestand voor de extensie
+* **Belangrijkste functies**: N.v.t. (JSON configuratiebestand)
+
+### 3.3 initialProperties.js
+* **Status**: Niet gestart
+* **Bestandsnaam**: initialProperties.js
+* **Functionaliteit**: Definieert de initiële eigenschappen van de extensie
+* **Belangrijkste functies**: N.v.t. (exporteert alleen een configuratie object)
+
+### 3.4 propertyPanel.js
+* **Status**: Niet gestart
+* **Bestandsnaam**: propertyPanel.js
+* **Functionaliteit**: Definieert het eigenschappen paneel voor de extensie
+* **Belangrijkste functies**:
+  * `getDefinition()`: 
+    * Parameters: Geen
+    * Return waarde: Eigenschappen paneel definitie object
+    * Afhankelijkheden: Geen
+
+### 3.5 trainDataService.js
+* **Status**: Niet gestart
+* **Bestandsnaam**: api/trainDataService.js
+* **Functionaliteit**: Service voor het ophalen van treingegevens van externe API's
+* **Belangrijkste functies**:
+  * `getTrainLocations(trainNumbers)`: 
+    * Parameters: 
+      * trainNumbers (Array): Lijst met treinnummers om te filteren
+    * Return waarde: Belofte met treinlocatie gegevens
+    * Afhankelijkheden: apiConfig.js
+
+### 3.6 apiConfig.js
+* **Status**: Niet gestart
+* **Bestandsnaam**: api/apiConfig.js
+* **Functionaliteit**: Configuratie voor API-endpoints en authenticatie
+* **Belangrijkste functies**: N.v.t. (exporteert alleen configuratie)
+
+### 3.7 mapRenderer.js
+* **Status**: Niet gestart
+* **Bestandsnaam**: ui/mapRenderer.js
+* **Functionaliteit**: Verantwoordelijk voor het initialiseren en renderen van de kaart
+* **Belangrijkste functies**:
+  * `initMap(container, options)`: 
+    * Parameters: 
+      * container (HTMLElement): Container element voor de kaart
+      * options (Object): Configuratie opties voor de kaart
+    * Return waarde: Map object
+    * Afhankelijkheden: Leaflet bibliotheek
+
+### 3.8 trainVisualizer.js
+* **Status**: Niet gestart
+* **Bestandsnaam**: ui/trainVisualizer.js
+* **Functionaliteit**: Verantwoordelijk voor het visualiseren van treinen op de kaart
+* **Belangrijkste functies**:
+  * `updateTrainPositions(map, trainData)`: 
+    * Parameters: 
+      * map (Object): Map object
+      * trainData (Array): Gegevens over treinlocaties
+    * Return waarde: Geen
+    * Afhankelijkheden: mapRenderer.js
+
+## 4. Status
+Alle modules zijn momenteel niet gestart.
+
+## 5. Volgende stappen
+
+### Must-haves:
+1. Basisstructuur opzetten van de Qlik extensie
+2. Implementatie van de LiveTrainExtension.js hoofdmodule
+3. Configuratie van het extensie metadata bestand (LiveTrainExtension.qext)
+4. Implementatie van de trainDataService voor het ophalen van treingegevens
+5. Integratie met Qlik Sense velden voor filteren op treinnummers
+6. Basisimplementatie van mapRenderer voor kaartweergave
+7. Visualisatie van treinen op de kaart
+8. Dynamische updates van treinposities
+
+### Nice-to-haves:
+1. Aanpasbare verversingsfrequentie van treingegevens via het eigenschappen paneel
+2. Mogelijkheid om verschillende kaartlagen te tonen/verbergen
+3. Historische weergave van treinbewegingen
+4. Extra informatie tonen bij klikken op een trein (vertraging, bestemming, etc.)
+5. Kleurcodering van treinen op basis van status (op tijd, vertraagd, etc.)
