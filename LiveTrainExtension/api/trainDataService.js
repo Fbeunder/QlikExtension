@@ -3,7 +3,7 @@
  * Service voor het ophalen van treingegevens van externe API's
  * Aangepast voor betere Qlik Cloud compatibiliteit
  */
-define(['jquery', './apiConfig'], function($, apiConfig) {
+define(['jquery', './apiConfig', 'qlik'], function($, apiConfig, qlik) {
   'use strict';
   
   /**
@@ -29,7 +29,7 @@ define(['jquery', './apiConfig'], function($, apiConfig) {
      */
     function detectQlikCloudEnvironment() {
       try {
-        // Probeer te detecteren of we in Qlik Cloud draaien
+        // Probeer te detecteren of we in Qlik Cloud draaien via hostname
         if (window && window.location && window.location.hostname) {
           var hostname = window.location.hostname;
           // Check of we op een Qlik Cloud domein zijn
@@ -40,6 +40,19 @@ define(['jquery', './apiConfig'], function($, apiConfig) {
             return true;
           }
         }
+        
+        // Alternatieve detectie via qlik object eigenschappen
+        try {
+          if (qlik && qlik.config) {
+            var isCloud = qlik.config.isCloud || false;
+            if (isCloud) {
+              return true;
+            }
+          }
+        } catch (innerErr) {
+          console.warn('Fout bij tweede methode voor Qlik Cloud detectie:', innerErr);
+        }
+        
         return false;
       } catch (e) {
         console.warn('Fout bij detecteren Qlik Cloud omgeving:', e);
@@ -65,6 +78,9 @@ define(['jquery', './apiConfig'], function($, apiConfig) {
       // Voeg CORS headers toe als we in Qlik Cloud draaien
       if (isQlikCloud) {
         headers['X-Requested-With'] = 'XMLHttpRequest';
+        // Extra headers voor Qlik Cloud
+        headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
+        headers['Pragma'] = 'no-cache';
       }
       
       return headers;
@@ -150,13 +166,13 @@ define(['jquery', './apiConfig'], function($, apiConfig) {
       // Headers voor het verzoek
       var headers = getRequestHeaders();
       
-      // Fetch opties
+      // Fetch opties met verbeterde Qlik Cloud ondersteuning
       var fetchOptions = {
         method: 'GET',
         headers: headers,
         mode: isQlikCloud ? 'cors' : 'same-origin',
         cache: 'no-cache',
-        credentials: 'same-origin',
+        credentials: isQlikCloud ? 'omit' : 'same-origin', // Geen cookies meesturen in Qlik Cloud
         redirect: 'follow',
         referrerPolicy: 'no-referrer-when-downgrade',
         timeout: 20000
@@ -186,7 +202,16 @@ define(['jquery', './apiConfig'], function($, apiConfig) {
               return response.json();
             })
             .then(resolve)
-            .catch(reject);
+            .catch(function(error) {
+              // Specifieke afhandeling voor Qlik Cloud CORS problemen
+              if (isQlikCloud && (error.name === 'TypeError' || (error.message && error.message.indexOf('networkerror') !== -1))) {
+                console.warn('Mogelijk CORS probleem in Qlik Cloud, valt terug op AJAX');
+                usePolyfillFetch = true;
+                reject(new Error('CORS probleem gedetecteerd, opnieuw proberen met AJAX'));
+              } else {
+                reject(error);
+              }
+            });
         });
       }, 2).then(processApiResponse(trainNumbers)).catch(handleApiError);
     }
@@ -212,9 +237,15 @@ define(['jquery', './apiConfig'], function($, apiConfig) {
       // Extra opties voor CORS in Qlik Cloud
       if (isQlikCloud) {
         ajaxOptions.xhrFields = {
-          withCredentials: false
+          withCredentials: false // Geen cookies meesturen
         };
         ajaxOptions.crossDomain = true;
+        
+        // Probeer via jsonp als cors problemen geeft in Qlik Cloud
+        if (url.indexOf('callback=') !== -1 || url.indexOf('jsonp=') !== -1) {
+          ajaxOptions.dataType = 'jsonp';
+          console.log('JSONP modus geactiveerd voor cross-domain verzoek in Qlik Cloud');
+        }
       }
       
       // Voer de AJAX request uit met retry mechanisme
@@ -274,8 +305,17 @@ define(['jquery', './apiConfig'], function($, apiConfig) {
       }
       
       // Als we in Qlik Cloud zijn, voeg extra informatie toe
-      if (isQlikCloud && error.message && error.message.indexOf('CORS') !== -1) {
-        errorMessage += ' (Mogelijk een CORS probleem in Qlik Cloud. Controleer de API configuratie en CORS instellingen.)';
+      if (isQlikCloud) {
+        var errorType = '';
+        if (error.message && (error.message.indexOf('CORS') !== -1 || error.message.indexOf('cross-origin') !== -1)) {
+          errorType = ' (Mogelijk een CORS probleem in Qlik Cloud. Controleer de API configuratie en overweeg een CORS-compatible API of proxy te gebruiken.)';
+        } else if (error.message && error.message.indexOf('NetworkError') !== -1) {
+          errorType = ' (Netwerkfout in Qlik Cloud. Controleer of de API endpoint toegankelijk is vanuit Qlik Cloud.)';
+        } else if (error.message && error.message.indexOf('timeout') !== -1) {
+          errorType = ' (Timeout in Qlik Cloud. De API reageert niet binnen de verwachte tijd.)';
+        }
+        
+        errorMessage += errorType;
       }
       
       throw new Error(errorMessage);
@@ -472,13 +512,13 @@ define(['jquery', './apiConfig'], function($, apiConfig) {
       
       try {
         // Extraheer de minuten uit de ISO8601 duration string
-        var minutesMatch = delayString.match(/PT(\d+)M/);
+        var minutesMatch = delayString.match(/PT(\\d+)M/);
         if (minutesMatch && minutesMatch[1]) {
           return parseInt(minutesMatch[1], 10);
         }
         
         // Probeer ook uren te extraheren indien aanwezig (bijv. PT1H30M)
-        var hoursMatch = delayString.match(/PT(\d+)H/);
+        var hoursMatch = delayString.match(/PT(\\d+)H/);
         if (hoursMatch && hoursMatch[1]) {
           var hours = parseInt(hoursMatch[1], 10);
           // Converteer uren naar minuten en voeg eventuele minuten toe
