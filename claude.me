@@ -133,7 +133,7 @@ LiveTrainExtension/
     * Afhankelijkheden: Geen
 
 ### 3.5 trainDataService.js
-* **Status**: Voltooid - Bijgewerkt voor integratie met NS-API, ReferenceError opgelost in startAutoRefresh, en geoptimaliseerd voor Qlik Cloud met verbeterde CORS-handling en credentials management
+* **Status**: Voltooid - Bijgewerkt voor integratie met NS-API, ReferenceError opgelost in de fetchWithFetch functie, regex patronen in calculateDelayInMinutes functie gecorrigeerd, en geoptimaliseerd voor Qlik Cloud met verbeterde CORS-handling en credentials management
 * **Bestandsnaam**: api/trainDataService.js
 * **Functionaliteit**: Service voor het ophalen van treingegevens van externe API's
 * **Belangrijkste functies**:
@@ -367,19 +367,19 @@ LiveTrainExtension/
 * **Belangrijkste functies**: N.v.t. (Markdown documentatie bestand)
 
 ### 3.15 CHANGELOG.md
-* **Status**: Voltooid - Nieuw toegevoegd
+* **Status**: Voltooid - Bijgewerkt met versie 1.0.2 details
 * **Bestandsnaam**: CHANGELOG.md
 * **Functionaliteit**: Wijzigingsgeschiedenis en versie-informatie
 * **Belangrijkste functies**: N.v.t. (Markdown documentatie bestand)
 
 ### 3.16 package.json
-* **Status**: Voltooid - Nieuw toegevoegd
+* **Status**: Voltooid
 * **Bestandsnaam**: package.json
 * **Functionaliteit**: Project metadata, dependencies en script configuratie
 * **Belangrijkste functies**: N.v.t. (JSON configuratiebestand)
 
 ### 3.17 build.js
-* **Status**: Voltooid - Nieuw toegevoegd
+* **Status**: Voltooid
 * **Bestandsnaam**: build.js
 * **Functionaliteit**: Geautomatiseerd build script voor het genereren van distributiepakketten
 * **Belangrijkste functies**:
@@ -402,7 +402,7 @@ LiveTrainExtension/
     * Afhankelijkheden: Alle bovenstaande functies
 
 ### 3.18 .gitignore
-* **Status**: Voltooid - Nieuw toegevoegd
+* **Status**: Voltooid
 * **Bestandsnaam**: .gitignore
 * **Functionaliteit**: Definieert bestanden die uitgesloten moeten worden van versiecontrole
 * **Belangrijkste functies**: N.v.t. (Configuratiebestand)
@@ -413,7 +413,7 @@ Voltooide modules:
 - LiveTrainExtension.qext
 - initialProperties.js (uitgebreid met standaardwaarden voor dynamische updates)
 - propertyPanel.js (uitgebreid met configuratie-opties voor dynamische updates en animatie)
-- api/trainDataService.js (bijgewerkt voor integratie met NS-API, ReferenceError opgelost en geoptimaliseerd voor Qlik Cloud met verbeterde CORS-handling)
+- api/trainDataService.js (bijgewerkt voor integratie met NS-API, ReferenceError opgelost in de fetchWithFetch functie, regex patronen in calculateDelayInMinutes functie gecorrigeerd, en geoptimaliseerd voor Qlik Cloud met verbeterde CORS-handling)
 - api/apiConfig.js (bijgewerkt voor het laden van API sleutels uit separate file en Qlik variabelen)
 - api/apiKey.js (nieuw: aparte module voor veilig beheer van API sleutels)
 - api/apiKey.template.js (nieuw: template voor het maken van apiKey.js)
@@ -425,11 +425,11 @@ Voltooide modules:
 - .gitignore (toegevoegd om apiKey.js uit te sluiten van versiecontrole)
 - QLIK_CLOUD_COMPATIBILITY.md (nieuw: documentatie over Qlik Cloud compatibiliteit)
 - EXTERNAL_LIBRARIES.md (nieuw: instructies voor het bundelen van externe bibliotheken)
-- CHANGELOG.md (nieuw: wijzigingsgeschiedenis en versie-informatie)
+- CHANGELOG.md (bijgewerkt met versie 1.0.2 details)
 - package.json (nieuw: project metadata, dependencies en script configuratie)
 - build.js (nieuw: geautomatiseerd build script voor distributie)
 
-Alle modules zijn nu volledig geïmplementeerd, geïntegreerd en geoptimaliseerd. De belangrijke bugs en functionele fouten in LiveTrainExtension.js zijn opgelost, waaronder:
+Alle modules zijn nu volledig geïmplementeerd, geïntegreerd en geoptimaliseerd. De belangrijke bugs en functionele fouten zijn opgelost, waaronder:
 - Memory leaks door meervoudige event handlers
 - XSS-kwetsbaarheden door directe HTML concatenatie
 - Inefficiënte filtering bij grote datasets
@@ -439,6 +439,8 @@ Alle modules zijn nu volledig geïmplementeerd, geïntegreerd en geoptimaliseerd
 - Inconsistente scope toegang
 - Foutafhandeling voor randgevallen
 - TypeErrors door onjuiste objectreferenties in Angular scope
+- ReferenceError door undefined trainNumbers parameter in fetchWithFetch functie
+- Incorrecte regex patronen in calculateDelayInMinutes functie
 
 De extensie is nu ook volledig compatibel gemaakt met Qlik Cloud door:
 - Verbeterde API key management met ondersteuning voor Qlik variabelen
@@ -469,6 +471,8 @@ Bovendien is een volledig geautomatiseerd build systeem geïmplementeerd waarmee
 13. ✅ Compatibiliteit met Qlik Cloud - geoptimaliseerd voor Qlik Cloud met verbeterde CORS-handling, DOM-manipulatie en documentatie
 14. ✅ Extensie-bundel voorbereiden voor productie-releases - build script en versie management implementeren
 15. ✅ Bugfix voor object referentie probleem in Animation Settings - opgelost
+16. ✅ Bugfix voor ReferenceError door undefined trainNumbers parameter in fetchWithFetch functie - opgelost
+17. ✅ Bugfix voor incorrecte regex patronen in calculateDelayInMinutes functie - opgelost
 
 Alle must-have functionaliteiten zijn nu geïmplementeerd, getest en geoptimaliseerd. De extensie is volledig functioneel, veilig en efficiënt voor gebruik in productieomgevingen, inclusief Qlik Cloud. Daarnaast is een geautomatiseerd build proces opgezet voor het genereren van productieklare distributiepakketten.
 
@@ -486,4 +490,6 @@ Alle must-have functionaliteiten zijn nu geïmplementeerd, getest en geoptimalis
 11. ✅ Veilige API key opslag gescheiden van de hoofdcode (geïmplementeerd)
 12. ✅ Qlik Cloud compatibiliteit (geïmplementeerd met verbeterde CORS-handling, DOM-manipulatie en documentatie)
 
-De extensie is nu volledig klaar voor productiegebruik. Alle essentiële functionaliteiten en compatibiliteit met Qlik Cloud zijn geïmplementeerd en getest. De resterende nice-to-have functionaliteiten (verschillende kaartlagen, historische weergave, uitgebreidere configuratie) kunnen in toekomstige iteraties worden toegevoegd, maar zijn niet essentieel voor de basiswerking van de applicatie.
+De extensie is nu volledig klaar voor productiegebruik. Alle essentiële functionaliteiten en bugs zijn geïmplementeerd en opgelost. De resterende nice-to-have functionaliteiten (verschillende kaartlagen, historische weergave, uitgebreidere configuratie) kunnen in toekomstige iteraties worden toegevoegd, maar zijn niet essentieel voor de basiswerking van de applicatie.
+
+De vervolgstappen zijn alleen nog maar verbeteringen van de bestaande functionaliteit.
