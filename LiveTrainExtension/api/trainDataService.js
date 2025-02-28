@@ -8,7 +8,7 @@ define(['jquery', './apiConfig'], function($, apiConfig) {
   /**
    * Service voor het ophalen en verwerken van treingegevens
    */
-  var trainDataService = function() {
+  return (function() {
     // Private variabelen
     var refreshTimer = null;
     var lastUpdate = null;
@@ -16,6 +16,7 @@ define(['jquery', './apiConfig'], function($, apiConfig) {
     var isRefreshing = false;
     var errorCount = 0;
     var MAX_ERROR_COUNT = 5;
+    var refreshCallbacks = [];
     
     /**
      * Maakt de request headers aan voor API verzoeken
@@ -47,9 +48,6 @@ define(['jquery', './apiConfig'], function($, apiConfig) {
       // Maak query parameters aan
       var params = Object.assign({}, apiConfig.defaultParams);
       
-      // Voor NS API is geen directe treinnummer filter beschikbaar in de URL
-      // We filteren de resultaten later na ontvangst
-      
       // Voer de AJAX request uit
       return $.ajax({
         url: url,
@@ -60,6 +58,11 @@ define(['jquery', './apiConfig'], function($, apiConfig) {
       }).then(function(response) {
         // Reset error teller bij succesvolle call
         errorCount = 0;
+        
+        // Controleer of response geldig is
+        if (!response) {
+          throw new Error('Empty response received from API');
+        }
         
         // Filter resultaten op treinnummers als die zijn opgegeven
         if (trainNumbers && trainNumbers.length > 0) {
@@ -91,17 +94,19 @@ define(['jquery', './apiConfig'], function($, apiConfig) {
      */
     function filterByTrainNumbers(response, trainNumbers) {
       if (!response || !response.payload || !Array.isArray(response.payload.treinen)) {
-        return response;
+        return { payload: { treinen: [] } };
       }
       
-      // Converteer treinnummers naar string voor vergelijking
-      var trainNumberStrings = trainNumbers.map(function(num) {
-        return num.toString();
+      // Maak een set van treinnummers voor effectieve lookup
+      var trainNumberSet = new Set();
+      trainNumbers.forEach(function(num) {
+        // Zorg ervoor dat nummers als strings worden opgeslagen
+        trainNumberSet.add(String(num).trim());
       });
       
       // Filter de treinen op treinnummer
       var filteredTrains = response.payload.treinen.filter(function(train) {
-        return trainNumberStrings.indexOf(train.treinNummer.toString()) !== -1;
+        return train.treinNummer && trainNumberSet.has(String(train.treinNummer).trim());
       });
       
       // Maak een nieuwe response met alleen de gefilterde treinen
@@ -120,7 +125,19 @@ define(['jquery', './apiConfig'], function($, apiConfig) {
      * @returns {Array} Array met verwerkte treinlocaties
      */
     function transformAPIResponse(response) {
-      if (!response || !response.payload || !Array.isArray(response.payload.treinen)) {
+      // Verbeterde validatie van de API response
+      if (!response) {
+        console.warn('Received empty response');
+        return [];
+      }
+      
+      if (!response.payload) {
+        console.warn('Response missing payload property');
+        return [];
+      }
+      
+      if (!Array.isArray(response.payload.treinen)) {
+        console.warn('Response payload.treinen is not an array');
         return [];
       }
       
@@ -178,10 +195,23 @@ define(['jquery', './apiConfig'], function($, apiConfig) {
       // NS API geeft vertraging als string, bijv. "PT5M" (5 minuten)
       var delayString = trainData.vertraging;
       
+      // Controleer op null of undefined
+      if (!delayString) {
+        return 0;
+      }
+      
       // Extraheer de minuten uit de ISO8601 duration string
       var minutesMatch = delayString.match(/PT(\d+)M/);
       if (minutesMatch && minutesMatch[1]) {
         return parseInt(minutesMatch[1], 10);
+      }
+      
+      // Probeer ook uren te extraheren indien aanwezig (bijv. PT1H30M)
+      var hoursMatch = delayString.match(/PT(\d+)H/);
+      if (hoursMatch && hoursMatch[1]) {
+        var hours = parseInt(hoursMatch[1], 10);
+        // Converteer uren naar minuten en voeg eventuele minuten toe
+        return hours * 60 + (minutesMatch && minutesMatch[1] ? parseInt(minutesMatch[1], 10) : 0);
       }
       
       return 0;
@@ -198,62 +228,142 @@ define(['jquery', './apiConfig'], function($, apiConfig) {
         return apiConfig.constants.TRAIN_STATUS.UNKNOWN;
       }
       
-      // Bepaal status op basis van statusinformatie en vertraging
-      if (trainData.status === 'NIET-GEPLAND') {
+      // Uitgebreidere status bepaling
+      if (!trainData.status) {
+        // Geen status informatie beschikbaar
+        return apiConfig.constants.TRAIN_STATUS.UNKNOWN;
+      }
+      
+      // Normaliseer de status string voor vergelijking
+      var normalizedStatus = trainData.status.toUpperCase();
+      
+      if (normalizedStatus === 'NIET-GEPLAND' || normalizedStatus === 'CANCELLED') {
         return apiConfig.constants.TRAIN_STATUS.CANCELLED;
-      } else if (trainData.vertraging) {
+      } else if (normalizedStatus === 'DELAYED' || normalizedStatus === 'VERTRAAGD') {
         return apiConfig.constants.TRAIN_STATUS.DELAYED;
+      } else if (normalizedStatus === 'DIVERTED' || normalizedStatus === 'OMGELEID') {
+        return apiConfig.constants.TRAIN_STATUS.DIVERTED;
+      } else if (trainData.vertraging) {
+        // Er is vertraging, zelfs als de status dat niet aangeeft
+        return apiConfig.constants.TRAIN_STATUS.DELAYED;
+      } else if (normalizedStatus === 'ON_TIME' || normalizedStatus === 'OP_TIJD') {
+        return apiConfig.constants.TRAIN_STATUS.ON_TIME;
       } else {
+        // Standaard op tijd als er geen andere status is opgegeven
         return apiConfig.constants.TRAIN_STATUS.ON_TIME;
       }
     }
     
-    // Maak een publieke methode voor getTrainLocations zodat deze in de private functies kan worden gebruikt
-    var publicApi = {
-      /**
-       * Haalt de meest recente treinlocatie gegevens op
-       * @param {Array} trainNumbers - Optionele array met treinnummers om te filteren
-       * @returns {Promise} Promise die resolvet naar treinlocatie data
-       */
-      getTrainLocations: function(trainNumbers) {
-        return fetchTrainLocationsFromAPI(trainNumbers)
-          .then(function(response) {
-            // Update timestamp van laatste update
-            lastUpdate = new Date();
-            
-            // Transformeer de data
-            var transformed = transformAPIResponse(response);
-            
-            // Cache de getransformeerde data
-            cachedData = transformed;
-            
-            return transformed;
+    /**
+     * Haalt de meest recente treinlocatie gegevens op
+     * @param {Array} trainNumbers - Optionele array met treinnummers om te filteren
+     * @returns {Promise} Promise die resolvet naar treinlocatie data
+     */
+    function getTrainLocations(trainNumbers) {
+      return fetchTrainLocationsFromAPI(trainNumbers)
+        .then(function(response) {
+          // Update timestamp van laatste update
+          lastUpdate = new Date();
+          
+          // Transformeer de data
+          var transformed = transformAPIResponse(response);
+          
+          // Cache de getransformeerde data
+          cachedData = transformed;
+          
+          return transformed;
+        });
+    }
+    
+    /**
+     * Start automatische verversing van treingegevens
+     * @param {Function} callback - Functie die wordt aangeroepen bij elke update
+     * @param {number} intervalSeconds - Interval in seconden (min 5)
+     */
+    function startAutoRefresh(callback, intervalSeconds) {
+      // Registreer de callback voor verversing als deze nog niet bestaat
+      if (callback && typeof callback === 'function' && refreshCallbacks.indexOf(callback) === -1) {
+        refreshCallbacks.push(callback);
+      }
+      
+      // Als er al een timer loopt, alleen de nieuwe callback toevoegen
+      if (refreshTimer) {
+        console.log('Auto refresh already running, added new callback');
+        return;
+      }
+      
+      // Valideer de interval
+      var interval = (intervalSeconds || 30) * 1000; // Converteer naar milliseconden
+      var refreshInterval = Math.max(
+        apiConfig.constants.REFRESH_INTERVALS.MINIMUM,
+        interval || apiConfig.constants.REFRESH_INTERVALS.DEFAULT
+      );
+      
+      // Start nieuwe timer voor automatische updates
+      refreshTimer = setInterval(function performRefresh() {
+        // Voorkom overlappende verversingen
+        if (isRefreshing) {
+          return;
+        }
+        
+        isRefreshing = true;
+        
+        // Direct gegevens ophalen zonder filter
+        getTrainLocations()
+          .then(function(data) {
+            isRefreshing = false;
+            // Roep alle geregistreerde callbacks aan
+            refreshCallbacks.forEach(function(cb) {
+              try {
+                cb(data);
+              } catch (e) {
+                console.error('Error in refresh callback:', e);
+              }
+            });
+          })
+          .catch(function(error) {
+            isRefreshing = false;
+            console.error('Error during auto refresh:', error);
           });
-      },
+      }, refreshInterval);
       
-      /**
-       * Start automatische verversing van treingegevens
-       * @param {Function} callback - Functie die wordt aangeroepen bij elke update
-       * @param {number} intervalSeconds - Interval in seconden (min 5)
-       */
-      startAutoRefresh: function(callback, intervalSeconds) {
-        var interval = (intervalSeconds || 30) * 1000; // Converteer naar milliseconden
-        startAutoRefresh(callback, interval);
-      },
+      console.log('Auto refresh started with interval: ' + refreshInterval + 'ms');
+    }
+    
+    /**
+     * Stopt de automatische verversing van treingegevens
+     */
+    function stopAutoRefresh() {
+      if (refreshTimer) {
+        clearInterval(refreshTimer);
+        refreshTimer = null;
+        console.log('Auto refresh stopped');
+      }
+    }
+    
+    /**
+     * Ruimt alle resources op en reset de service naar initiële staat
+     */
+    function cleanup() {
+      // Stop timer voor auto refresh
+      stopAutoRefresh();
       
-      /**
-       * Stopt automatische verversing van treingegevens
-       */
-      stopAutoRefresh: function() {
-        stopAutoRefresh();
-      },
+      // Reset alle variabelen
+      lastUpdate = null;
+      cachedData = null;
+      isRefreshing = false;
+      errorCount = 0;
+      refreshCallbacks = [];
       
-      /**
-       * Transformeert API-respons naar een bruikbaar formaat
-       * @param {Object} response - API respons object
-       * @returns {Array} Getransformeerde treingegevens
-       */
-      transformAPIResponse: transformAPIResponse,
+      console.log('Train data service cleaned up');
+    }
+    
+    // Returneer publieke API
+    return {
+      getTrainLocations: getTrainLocations,
+      startAutoRefresh: startAutoRefresh,
+      stopAutoRefresh: stopAutoRefresh,
+      cleanup: cleanup,
       
       /**
        * Haalt het tijdstip van de laatste update op
@@ -277,64 +387,21 @@ define(['jquery', './apiConfig'], function($, apiConfig) {
        */
       configure: function(options) {
         apiConfig.configure(options);
+      },
+      
+      /**
+       * Verwijdert een specifieke callback uit de refresh lijst
+       * @param {Function} callback - De callback functie om te verwijderen
+       * @returns {boolean} true als de callback is verwijderd, anders false
+       */
+      removeRefreshCallback: function(callback) {
+        var index = refreshCallbacks.indexOf(callback);
+        if (index !== -1) {
+          refreshCallbacks.splice(index, 1);
+          return true;
+        }
+        return false;
       }
     };
-    
-    /**
-     * Start de automatische verversing van treingegevens
-     * @param {Function} callback - Functie die wordt aangeroepen bij elke update
-     * @param {number} interval - Interval in milliseconden (min 5000)
-     */
-    function startAutoRefresh(callback, interval) {
-      // Stop eerst eventuele bestaande timer
-      stopAutoRefresh();
-      
-      // Valideer de interval
-      var refreshInterval = Math.max(
-        apiConfig.constants.REFRESH_INTERVALS.MINIMUM,
-        interval || apiConfig.constants.REFRESH_INTERVALS.DEFAULT
-      );
-      
-      // Start nieuwe timer voor automatische updates
-      refreshTimer = setInterval(function() {
-        // Voorkom overlappende verversingen
-        if (isRefreshing) {
-          return;
-        }
-        
-        isRefreshing = true;
-        
-        // Direct gegevens ophalen zonder filter
-        // Hier gebruiken we de publieke methode via publicApi om de ReferenceError op te lossen
-        publicApi.getTrainLocations()
-          .then(function(data) {
-            isRefreshing = false;
-            if (typeof callback === 'function') {
-              callback(data);
-            }
-          })
-          .catch(function(error) {
-            isRefreshing = false;
-            console.error('Error during auto refresh:', error);
-          });
-      }, refreshInterval);
-      
-      console.log('Auto refresh started with interval: ' + refreshInterval + 'ms');
-    }
-    
-    /**
-     * Stopt de automatische verversing van treingegevens
-     */
-    function stopAutoRefresh() {
-      if (refreshTimer) {
-        clearInterval(refreshTimer);
-        refreshTimer = null;
-        console.log('Auto refresh stopped');
-      }
-    }
-    
-    return publicApi;
-  }();
-  
-  return trainDataService;
+  })();
 });
