@@ -1,8 +1,9 @@
 /*
  * LiveTrainExtension - Een Qlik Sense extensie voor het live volgen van treinen
  * API configuratie voor endpoints en authenticatie
+ * Aangepast voor Qlik Cloud compatibiliteit
  */
-define(['./apiKey'], function(apiKeyConfig) {
+define(['./apiKey', 'qlik'], function(apiKeyConfig, qlik) {
   'use strict';
   
   /**
@@ -89,13 +90,115 @@ define(['./apiKey'], function(apiKeyConfig) {
     },
     
     /**
+     * Methode om API key uit Qlik variabelen te laden (voor Qlik Cloud compatibiliteit)
+     * @returns {Promise} Promise die resolvet wanneer de API key is geladen of faalt
+     */
+    loadApiKeyFromQlik: function() {
+      var self = this;
+      var deferred = $.Deferred();
+      
+      try {
+        var app = qlik.currApp();
+        if (app) {
+          // Probeer eerst de NS_API_KEY variabele te laden
+          app.variable.getContent('NS_API_KEY')
+            .then(function(value) {
+              if (value && value.qContent && value.qContent.qString) {
+                self.auth.key = value.qContent.qString;
+                console.log('API sleutel geladen uit Qlik variabele NS_API_KEY');
+                deferred.resolve(true);
+              } else {
+                // Als dat mislukt, probeer TRAIN_API_KEY
+                return app.variable.getContent('TRAIN_API_KEY');
+              }
+            })
+            .then(function(value) {
+              if (value && value.qContent && value.qContent.qString) {
+                self.auth.key = value.qContent.qString;
+                console.log('API sleutel geladen uit Qlik variabele TRAIN_API_KEY');
+                deferred.resolve(true);
+              } else {
+                // Als beide mislukken, probeer fallback naar API_KEY
+                return app.variable.getContent('API_KEY');
+              }
+            })
+            .then(function(value) {
+              if (value && value.qContent && value.qContent.qString) {
+                self.auth.key = value.qContent.qString;
+                console.log('API sleutel geladen uit Qlik variabele API_KEY');
+                deferred.resolve(true);
+              } else {
+                // Als geen van de variabelen bestaat, log een waarschuwing
+                console.warn('Geen Qlik variabele gevonden voor API sleutel. ' +
+                            'Maak een variabele NS_API_KEY, TRAIN_API_KEY of API_KEY aan.');
+                deferred.resolve(false);
+              }
+            })
+            .catch(function(error) {
+              console.warn('Kon API key niet laden uit Qlik variabele:', error);
+              deferred.resolve(false);
+            });
+        } else {
+          console.warn('Geen actieve Qlik app gevonden');
+          deferred.resolve(false);
+        }
+      } catch (e) {
+        console.warn('Fout bij laden API key uit Qlik variabele:', e);
+        deferred.resolve(false);
+      }
+      
+      return deferred.promise();
+    },
+    
+    /**
      * Methode om te configureren of te initialiseren wat nodig is
+     * Uitgebreid met ondersteuning voor Qlik Cloud API key beheer
      * @param {Object} options - Configuratie opties
+     * @returns {Promise} Promise die resolvet wanneer configuratie is voltooid
      */
     configure: function(options) {
-      // Laad eerst de API sleutel
+      var self = this;
+      var deferred = $.Deferred();
+      
+      // Laad eerst de API sleutel uit apiKey.js
       this.loadApiKey(options && options.environment);
       
+      // Als we een API key hebben uit apiKey.js, hoeven we niet uit Qlik te laden
+      if (this.auth.key) {
+        this.applyOptions(options);
+        deferred.resolve(true);
+        return deferred.promise();
+      }
+      
+      // Als we nog geen API key hebben, probeer uit Qlik variabelen te laden
+      this.loadApiKeyFromQlik()
+        .then(function(success) {
+          // API sleutel instellingen vanuit options toepassen indien opgegeven
+          self.applyOptions(options);
+          
+          // Als we nog steeds geen API key hebben en er is er een opgegeven, gebruik die
+          if (!self.auth.key && options && options.apiKey) {
+            self.auth.key = options.apiKey;
+          }
+          
+          deferred.resolve(true);
+        })
+        .catch(function(error) {
+          console.error('Fout bij configureren API:', error);
+          
+          // Toch opties toepassen, zelfs als API key laden mislukt
+          self.applyOptions(options);
+          deferred.resolve(false);
+        });
+      
+      return deferred.promise();
+    },
+    
+    /**
+     * Interne helper-methode om opties toe te passen op de configuratie
+     * @param {Object} options - Configuratie opties
+     */
+    applyOptions: function(options) {
       if (options) {
         // Overschrijf configuratie met opgegeven opties
         if (options.baseUrl) this.baseUrl = options.baseUrl;
@@ -127,7 +230,7 @@ define(['./apiKey'], function(apiKeyConfig) {
       // Controleer of er een API key is ingesteld
       if (!this.auth.key) {
         result.isValid = false;
-        result.errors.push('Geen API key geconfigureerd. Voeg uw API sleutel toe in het bestand apiKey.js.');
+        result.errors.push('Geen API key geconfigureerd. Voeg uw API sleutel toe in het bestand apiKey.js of maak een Qlik variabele NS_API_KEY aan.');
       }
       
       // Controleer of de basis URL is ingesteld
