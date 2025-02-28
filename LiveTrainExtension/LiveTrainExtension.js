@@ -2,10 +2,12 @@
  * LiveTrainExtension - Een Qlik Sense extensie voor het live volgen van treinen
  * Hoofdmodule voor de extensie
  * Aangepast voor betere Qlik Cloud compatibiliteit
+ * Met bundled externe bibliotheken
  */
 define([
   'qlik',
-  'jquery',
+  './lib/jquery/jquery.min',  // Eerst lokale versie proberen
+  'jquery',                   // Fallback naar Qlik's versie
   './initialProperties',
   './propertyPanel',
   './lib/js/qlik-style',
@@ -13,9 +15,14 @@ define([
   './api/apiConfig',
   './ui/mapRenderer',
   './ui/trainVisualizer',
+  './lib/leaflet/leaflet',    // Direct import of bundled leaflet library
+  'css!./lib/leaflet/leaflet.css',  // Import bundled Leaflet CSS
   'css!./lib/css/style.css'
-], function(qlik, $, initialProperties, propertyPanel, QlikStyle, trainDataService, apiConfig, mapRenderer, trainVisualizer) {
+], function(qlik, $jquery1, $jquery2, initialProperties, propertyPanel, QlikStyle, trainDataService, apiConfig, mapRenderer, trainVisualizer) {
   'use strict';
+  
+  // Gebruik beschikbare jQuery versie
+  var $ = $jquery1 || $jquery2;
 
   /**
    * Helper functie om tekst te escapen voor gebruik in HTML
