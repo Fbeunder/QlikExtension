@@ -36,7 +36,7 @@ LiveTrainExtension/
 ## 3. Modules
 
 ### 3.1 LiveTrainExtension.js
-* **Status**: Voltooid - Geïntegreerd met trainDataService, selectiemogelijkheden, mapRenderer, trainVisualizer, en dynamische updates. Functionele fouten opgelost waaronder memory leaks, XSS-kwetsbaarheden, inefficiënte filtering, race conditions en betere foutafhandeling. Geoptimaliseerd voor Qlik Cloud met verbeterde DOM-manipulatie, event delegatie en CSP-naleving.
+* **Status**: Voltooid - Geïntegreerd met trainDataService, selectiemogelijkheden, mapRenderer, trainVisualizer, en dynamische updates. Functionele fouten opgelost waaronder memory leaks, XSS-kwetsbaarheden, inefficiënte filtering, race conditions, betere foutafhandeling en problemen met object referenties in de Angular scope. Geoptimaliseerd voor Qlik Cloud met verbeterde DOM-manipulatie, event delegatie en CSP-naleving.
 * **Bestandsnaam**: LiveTrainExtension.js
 * **Functionaliteit**: Hoofdmodule die de extensie initialiseert en integreert met Qlik Sense
 * **Belangrijkste functies**:
@@ -409,7 +409,7 @@ LiveTrainExtension/
 
 ## 4. Status
 Voltooide modules:
-- LiveTrainExtension.js (geoptimaliseerd met verbeterde event handling, XSS-beveiliging, efficiëntere filtering, betere foutafhandeling en Qlik Cloud compatibiliteit)
+- LiveTrainExtension.js (geoptimaliseerd met verbeterde event handling, XSS-beveiliging, efficiëntere filtering, betere foutafhandeling en Qlik Cloud compatibiliteit, bugfix voor object referentie probleem in Animation Settings)
 - LiveTrainExtension.qext
 - initialProperties.js (uitgebreid met standaardwaarden voor dynamische updates)
 - propertyPanel.js (uitgebreid met configuratie-opties voor dynamische updates en animatie)
@@ -438,6 +438,7 @@ Alle modules zijn nu volledig geïmplementeerd, geïntegreerd en geoptimaliseerd
 - DOM-manipulatie in de controller
 - Inconsistente scope toegang
 - Foutafhandeling voor randgevallen
+- TypeErrors door onjuiste objectreferenties in Angular scope
 
 De extensie is nu ook volledig compatibel gemaakt met Qlik Cloud door:
 - Verbeterde API key management met ondersteuning voor Qlik variabelen
@@ -467,6 +468,7 @@ Bovendien is een volledig geautomatiseerd build systeem geïmplementeerd waarmee
 12. ✅ Implementatie van aparte apiKey.js file voor veilig API key beheer
 13. ✅ Compatibiliteit met Qlik Cloud - geoptimaliseerd voor Qlik Cloud met verbeterde CORS-handling, DOM-manipulatie en documentatie
 14. ✅ Extensie-bundel voorbereiden voor productie-releases - build script en versie management implementeren
+15. ✅ Bugfix voor object referentie probleem in Animation Settings - opgelost
 
 Alle must-have functionaliteiten zijn nu geïmplementeerd, getest en geoptimaliseerd. De extensie is volledig functioneel, veilig en efficiënt voor gebruik in productieomgevingen, inclusief Qlik Cloud. Daarnaast is een geautomatiseerd build proces opgezet voor het genereren van productieklare distributiepakketten.
 
