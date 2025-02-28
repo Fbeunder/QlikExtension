@@ -881,8 +881,34 @@ define([
           // Check of de layout en object nog bestaan
           if (!$scope.layout) return;
           
-          var obj = $scope.$parent.object;
-          if (!obj) return;
+          // Verkrijg de juiste referentie naar het object met de getSelectedTrainNumbers functie
+          var obj = null;
+          
+          // Probeer eerst vanuit de parent scope
+          if ($scope.$parent && $scope.$parent.object && 
+              typeof $scope.$parent.object.getSelectedTrainNumbers === 'function') {
+            obj = $scope.$parent.object;
+          } 
+          // Als fallback, gebruik het object dat hangt aan $element.data('object')
+          else if ($element && $element.data && typeof $element.data === 'function') {
+            obj = $element.data('object');
+            // Controleer of dit object de benodigde methode heeft
+            if (!obj || typeof obj.getSelectedTrainNumbers !== 'function') {
+              // Laatste poging: gebruik $scope.$parent.$parent.object
+              if ($scope.$parent && $scope.$parent.$parent && $scope.$parent.$parent.object &&
+                  typeof $scope.$parent.$parent.object.getSelectedTrainNumbers === 'function') {
+                obj = $scope.$parent.$parent.object;
+              } else {
+                console.error('Geen geldig object met getSelectedTrainNumbers functie gevonden');
+                return;
+              }
+            }
+          }
+          
+          if (!obj) {
+            console.error('Kan geen geldig object vinden met getSelectedTrainNumbers functie');
+            return;
+          }
           
           // Update train markers bij nieuwe data
           var currentTrainNumbers = obj.getSelectedTrainNumbers($scope.layout);
@@ -907,7 +933,7 @@ define([
           if (self.$scope && self.$scope.layout && self.$scope.layout.updateTableOnRefresh) {
             $scope.$applyAsync(function() {
               if ($scope.layout && $scope.layout.autoRefresh) {
-                // Gebruik de parent scope object
+                // Gebruik het eerder gevonden object
                 obj.paint($element, $scope.layout);
               }
             });
