@@ -18,11 +18,13 @@ Deze extensie maakt het mogelijk om real-time treinposities te visualiseren in Q
 - **Responsief**: Past zich aan het formaat van het dashboard aan
 - **Statusweergave**: Toon vertraging, snelheid en andere treinstatussen
 - **Thema-ondersteuning**: Past zich aan het Qlik Sense thema aan (licht/donker)
+- **Qlik Cloud Ready**: Geoptimaliseerd voor gebruik in Qlik Cloud-omgevingen
 
 ## Vereisten
 
 - Qlik Sense Desktop (Februari 2023 of nieuwer)
 - Qlik Sense Enterprise (Februari 2023 of nieuwer)
+- Qlik Cloud (Februari 2023 of nieuwer)
 - NS API Key (verkrijgbaar via [NS Developer Portal](https://apiportal.ns.nl/))
 - Moderne webbrowser (Chrome, Firefox, Edge, Safari)
 
@@ -37,6 +39,15 @@ Deze extensie maakt het mogelijk om real-time treinposities te visualiseren in Q
 5. Selecteer het gedownloade zip-bestand
 6. Klik op Import
 
+### Via Qlik Cloud
+
+1. Download de laatste release van de extensie (zip-bestand)
+2. Log in op uw Qlik Cloud tenant
+3. Ga naar de Management Console
+4. Selecteer "Extensions" onder "Content"
+5. Klik op "Add" en selecteer het gedownloade zip-bestand
+6. Klik op "Upload en activeer"
+
 ### Handmatige installatie (ontwikkelaars)
 
 1. Clone deze repository
@@ -46,20 +57,29 @@ Deze extensie maakt het mogelijk om real-time treinposities te visualiseren in Q
 
 ## API Key Configuratie
 
-De extensie gebruikt de NS API en vereist daarom een API key. Deze wordt nu veilig beheerd via een apart configuratiebestand:
+De extensie gebruikt de NS API en vereist daarom een API key. Deze wordt nu veilig beheerd via een apart configuratiebestand of via Qlik variabelen:
+
+### Optie 1: Via apiKey.js (aanbevolen voor ontwikkeling)
 
 1. Ga naar de map `LiveTrainExtension/api/`
 2. Kopieer het bestand `apiKey.template.js` naar een nieuw bestand genaamd `apiKey.js`
 3. Open `apiKey.js` en voer uw NS API key in bij het veld `apiKey`
 4. Sla het bestand op
 
+### Optie 2: Via Qlik variabele (aanbevolen voor Qlik Cloud)
+
+1. Maak een nieuwe variabele in uw Qlik app genaamd `NS_API_KEY`
+2. Stel de waarde in op uw NS API key
+3. De extensie zal automatisch deze variabele gebruiken in Qlik Cloud
+
 **Voordelen van deze aanpak:**
 - Veiligere opslag van API keys buiten de hoofdcode
 - Eenvoudig te updaten zonder de hoofdcode aan te passen
 - Voorkomt per ongeluk delen van API keys via versiebeheersystemen (apiKey.js is opgenomen in .gitignore)
 - Ondersteunt verschillende keys voor ontwikkelings- en productieomgevingen
+- Qlik Cloud compatibel via variabelen
 
-**Voorbeeld:**
+**Voorbeeld van apiKey.js:**
 ```javascript
 var apiKeyConfig = {
     apiKey: 'uw-ns-api-sleutel-hier',
@@ -89,7 +109,7 @@ De extensie configuratie is opgedeeld in vier hoofdonderdelen:
 
 De NS API vereist een geldige API key. Configureer deze in het eigenschappen paneel of in het aparte apiKey.js bestand (aanbevolen):
 
-- **API Key**: Voer uw NS API key in (aanbevolen om dit in apiKey.js te doen)
+- **API Key**: Voer uw NS API key in (aanbevolen om dit in apiKey.js te doen of via Qlik variabele)
 - **CORS Proxy**: Schakel deze optie in als u CORS-problemen ondervindt
 - **CORS Proxy URL**: URL naar een CORS proxy (indien nodig)
 
@@ -136,22 +156,46 @@ De extensie ondersteunt bidirectionele selecties:
 - Selecteer een treinnummer in andere visualisaties om deze te highlighten op de kaart
 - Gebruik de "Alleen geselecteerde treinen ophalen" optie om API-verzoeken te beperken tot geselecteerde treinen
 
+## Qlik Cloud Compatibiliteit
+
+De extensie is geoptimaliseerd voor Qlik Cloud met de volgende verbeteringen:
+
+### API Key beheer
+- Ondersteunt opslag van API key in Qlik variabelen (NS_API_KEY, TRAIN_API_KEY, of API_KEY)
+- Qlik variabelen worden automatisch gedetecteerd en gebruikt indien beschikbaar
+
+### CORS en beveiliging
+- Verbeterde CORS handling voor Qlik Cloud's striktere beveiligingsbeleid
+- Automatische detectie van Qlik Cloud omgeving met aangepaste instellingen
+- Intelligente fallback mechanismen (fetch → ajax → jsonp) voor maximale compatibiliteit
+
+### Performance
+- Geoptimaliseerde DOM-manipulatie voor betere prestaties in Qlik Cloud
+- Efficiëntere event handling via event delegatie
+- Set-based filtering voor snellere gegevensverwerking
+- Verhoogde minimale verversingsfrequentie (10s) in Qlik Cloud voor betere prestaties
+
+### Bibliotheek bundeling
+- Instructies voor bundeling van externe bibliotheken met de extensie
+- Gebruik HTTPS voor alle externe resources
+- Zie `EXTERNAL_LIBRARIES.md` voor gedetailleerde bundeling-instructies
+
 ## Bekende problemen en oplossingen
 
 ### CORS beperkingen
 
-Als u CORS-fouten krijgt bij het ophalen van data:
+Als u CORS-fouten krijgt bij het ophalen van data in Qlik Cloud:
 
 1. Schakel de "Gebruik CORS proxy" optie in
 2. Voer een geldige CORS proxy URL in (bijv. `https://cors-anywhere.herokuapp.com/`)
-3. Of stel de juiste CORS headers in op uw Qlik Sense server
+3. Overweeg gebruik van de Qlik Cloud Backend Integration Service voor het relayeren van API verzoeken
 
 ### Prestatieproblemen
 
-Als de extensie traag wordt:
+Als de extensie traag wordt in Qlik Cloud:
 
 1. Verlaag het "Maximum aantal treinen" in de instellingen
-2. Verhoog het verversingsinterval (minder frequente updates)
+2. Verhoog het verversingsinterval (minstens 10 seconden aanbevolen)
 3. Schakel animaties uit bij veel markers
 4. Gebruik selecties om alleen relevante treinen te tonen
 
@@ -168,7 +212,7 @@ Deze extensie maakt gebruik van de NS Virtual Train API:
 - `lng`: Lengtegraad van het centrum van het zoekgebied
 - `features`: Ingesteld op 'trein' om alleen treinen weer te geven
 
-**Snelheidsbeperkingen**: Niet vaker dan eens per 5 seconden vernieuwen
+**Snelheidsbeperkingen**: Niet vaker dan eens per 5 seconden vernieuwen (10 seconden in Qlik Cloud)
 
 ## Voor ontwikkelaars
 
@@ -180,6 +224,8 @@ LiveTrainExtension/
 ├── LiveTrainExtension.qext       # Metadata bestand
 ├── initialProperties.js          # Initiële configuratie
 ├── propertyPanel.js              # Eigenschappen paneel
+├── QLIK_CLOUD_COMPATIBILITY.md   # Documentatie voor Qlik Cloud compatibiliteit
+├── EXTERNAL_LIBRARIES.md         # Instructies voor bundelen van bibliotheken
 ├── api/
 │   ├── trainDataService.js       # Service voor het ophalen van treingegevens
 │   ├── apiConfig.js              # API configuratie en endpoints
@@ -208,7 +254,8 @@ LiveTrainExtension/
 2. Maak een apiKey.js bestand op basis van het template met uw eigen API sleutel
 3. Wijzig bestanden naar wens
 4. Test de extensie in Qlik Sense Desktop
-5. Verpak (zip) voor distributie (apiKey.js wordt automatisch uitgesloten via .gitignore)
+5. Voor Qlik Cloud compatibiliteit, volg de instructies in QLIK_CLOUD_COMPATIBILITY.md
+6. Verpak (zip) voor distributie (apiKey.js wordt automatisch uitgesloten via .gitignore)
 
 ### Debuggen
 
