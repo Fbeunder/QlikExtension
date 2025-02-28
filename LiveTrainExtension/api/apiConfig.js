@@ -2,7 +2,7 @@
  * LiveTrainExtension - Een Qlik Sense extensie voor het live volgen van treinen
  * API configuratie voor endpoints en authenticatie
  */
-define([], function() {
+define(['./apiKey'], function(apiKeyConfig) {
   'use strict';
   
   /**
@@ -29,7 +29,7 @@ define([], function() {
     auth: {
       method: 'apiKey',          // Authenticatiemethode
       headerName: 'Ocp-Apim-Subscription-Key',  // Naam van de header voor de NS API key
-      key: ''                    // API-key waarde (moet door de gebruiker worden ingesteld)
+      key: ''                    // API-key waarde (wordt geladen uit apiKey.js)
     },
     
     // Standaard parameters voor API verzoeken
@@ -76,10 +76,26 @@ define([], function() {
     },
     
     /**
+     * Laadt de API sleutel uit de apiKey.js configuratie
+     * @param {string} [environment] - Optionele omgeving ('dev' of 'prod')
+     */
+    loadApiKey: function(environment) {
+      if (apiKeyConfig && typeof apiKeyConfig.getApiKey === 'function') {
+        this.auth.key = apiKeyConfig.getApiKey(environment);
+        console.log('API sleutel geladen' + (environment ? ' voor omgeving: ' + environment : ''));
+      } else {
+        console.warn('Kan API sleutel niet laden uit apiKey.js. Controleer of de apiKey.js correct is geconfigureerd.');
+      }
+    },
+    
+    /**
      * Methode om te configureren of te initialiseren wat nodig is
      * @param {Object} options - Configuratie opties
      */
     configure: function(options) {
+      // Laad eerst de API sleutel
+      this.loadApiKey(options && options.environment);
+      
       if (options) {
         // Overschrijf configuratie met opgegeven opties
         if (options.baseUrl) this.baseUrl = options.baseUrl;
@@ -111,7 +127,7 @@ define([], function() {
       // Controleer of er een API key is ingesteld
       if (!this.auth.key) {
         result.isValid = false;
-        result.errors.push('Geen API key geconfigureerd. Configureer deze in de eigenschappen.');
+        result.errors.push('Geen API key geconfigureerd. Voeg uw API sleutel toe in het bestand apiKey.js.');
       }
       
       // Controleer of de basis URL is ingesteld
@@ -129,6 +145,9 @@ define([], function() {
       return result;
     }
   };
+  
+  // Initialiseer de API sleutel bij het laden van de module
+  apiConfig.loadApiKey();
   
   return apiConfig;
 });
