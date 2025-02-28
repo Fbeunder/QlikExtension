@@ -1,6 +1,7 @@
 /*
  * LiveTrainExtension - Een Qlik Sense extensie voor het live volgen van treinen
  * Hoofdmodule voor de extensie
+ * Aangepast voor betere Qlik Cloud compatibiliteit
  */
 define([
   'qlik',
@@ -66,21 +67,230 @@ define([
         // Ruim alleen events binnen namespace op
         $element.off('.' + namespace);
         
-        // Ruim specifieke element events op
-        $element.find('#refreshTrainData').off('.' + namespace);
-        $element.find('#autoRefreshToggle').off('.' + namespace);
-        $element.find('#clearTrainSelections').off('.' + namespace);
-        $element.find('table tbody tr').off('.' + namespace);
+        // Ruim specifieke element events op met delegatie
+        $element.find('.train-extension-container').off('.' + namespace);
       } else {
-        // Ruim alle events op
-        $element.find('#refreshTrainData').off();
-        $element.find('#autoRefreshToggle').off();
-        $element.find('#clearTrainSelections').off();
-        $element.find('table tbody tr').off();
+        // Ruim alle events op op het root element
+        $element.off();
       }
     } catch (e) {
       console.error('Fout bij opruimen van events:', e);
     }
+  }
+  
+  /**
+   * Helper functie om te detecteren of we in Qlik Cloud omgeving draaien
+   * @returns {boolean} True als we in Qlik Cloud draaien
+   */
+  function isQlikCloudEnvironment() {
+    // Delegeer aan trainDataService die al de detectie implementeert
+    if (trainDataService && typeof trainDataService.isQlikCloudEnvironment === 'function') {
+      return trainDataService.isQlikCloudEnvironment();
+    }
+    
+    // Fallback detectie indien trainDataService niet beschikbaar is
+    try {
+      // Probeer te detecteren via qlik object
+      if (qlik && qlik.config) {
+        var isCloud = qlik.config.isCloud || false;
+        if (isCloud) return true;
+      }
+      
+      // Probeer te detecteren via hostname
+      if (window && window.location && window.location.hostname) {
+        var hostname = window.location.hostname;
+        if (hostname.indexOf('qlikcloud.com') !== -1) {
+          return true;
+        }
+      }
+    } catch (e) {
+      console.warn('Fout bij detecteren Qlik Cloud omgeving:', e);
+    }
+    
+    return false;
+  }
+  
+  /**
+   * Helper functie om efficiënt DOM elementen te creëren
+   * @param {string} tag - HTML tag naam
+   * @param {object} attrs - Object met attributen
+   * @param {string|array} content - Inhoud (tekst of array van child elementen)
+   * @returns {HTMLElement} Gemaakte element
+   */
+  function createElement(tag, attrs, content) {
+    var element = document.createElement(tag);
+    
+    // Voeg attributen toe
+    if (attrs) {
+      Object.keys(attrs).forEach(function(key) {
+        if (key === 'className') {
+          element.className = attrs[key];
+        } else if (key === 'style' && typeof attrs[key] === 'object') {
+          Object.keys(attrs[key]).forEach(function(styleKey) {
+            element.style[styleKey] = attrs[key][styleKey];
+          });
+        } else if (key.startsWith('data-')) {
+          element.setAttribute(key, attrs[key]);
+        } else {
+          element[key] = attrs[key];
+        }
+      });
+    }
+    
+    // Voeg content toe
+    if (content) {
+      if (Array.isArray(content)) {
+        content.forEach(function(child) {
+          if (child) {
+            element.appendChild(
+              typeof child === 'string' 
+                ? document.createTextNode(child) 
+                : child
+            );
+          }
+        });
+      } else if (typeof content === 'string') {
+        element.textContent = content;
+      } else {
+        element.appendChild(content);
+      }
+    }
+    
+    return element;
+  }
+  
+  /**
+   * Helper functie om een button element te maken met standaard styling
+   * @param {string} text - Tekst op de knop
+   * @param {string} id - ID voor de knop
+   * @param {string} className - Extra CSS klassen
+   * @returns {HTMLElement} Button element
+   */
+  function createButton(text, id, className) {
+    return createElement('button', {
+      id: id,
+      className: 'qlik-button ' + (className || '')
+    }, text);
+  }
+  
+  /**
+   * Helper functie om een trein tabel te bouwen
+   * @param {Array} trainData - Array van treingegevens
+   * @param {Array} selectedTrainIds - Array van geselecteerde trein IDs
+   * @param {Object} layout - Layout object met configuratie
+   * @returns {HTMLElement} Tabel element
+   */
+  function buildTrainTable(trainData, selectedTrainIds, layout) {
+    // Container voor tabel
+    var tableContainer = createElement('div', {
+      className: 'train-data-table'
+    });
+    
+    if (!trainData || trainData.length === 0) {
+      var noDataMsg = createElement('p', {}, 
+        'Geen treingegevens beschikbaar. Klik op "Ververs gegevens" om gegevens op te halen.'
+      );
+      tableContainer.appendChild(noDataMsg);
+      return tableContainer;
+    }
+    
+    // Filter de gegevens op basis van geselecteerde treinnummers indien nodig
+    var filteredData = trainData;
+    var selectedTrainSet;
+    
+    if (selectedTrainIds && selectedTrainIds.length > 0 && layout.filterBySelection) {
+      // Gebruik een Set voor efficiëntere lookups
+      selectedTrainSet = new Set(selectedTrainIds.map(function(num) {
+        return String(num).trim();
+      }));
+      
+      filteredData = trainData.filter(function(train) {
+        return train.number && selectedTrainSet.has(String(train.number).trim());
+      });
+    }
+    
+    // Toon maximaal het aantal ingestelde treinen
+    var maxTrainsToShow = layout.maxTrainsToShow || 50;
+    filteredData = filteredData.slice(0, maxTrainsToShow);
+    
+    // Maak de tabel
+    var table = createElement('table', {});
+    
+    // Maak de tabel header
+    var thead = createElement('thead', {});
+    var headerRow = createElement('tr', {});
+    
+    // Header kolommen
+    ['Treinnr', 'Type', 'Herkomst', 'Bestemming', 'Status', 'Vertraging', 'Snelheid'].forEach(function(title) {
+      headerRow.appendChild(createElement('th', {}, title));
+    });
+    
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+    
+    // Maak de tabel body
+    var tbody = createElement('tbody', {});
+    
+    // Voeg rijen toe voor elke trein
+    filteredData.forEach(function(train) {
+      var statusClass = '';
+      switch (train.status) {
+        case apiConfig.constants.TRAIN_STATUS.ON_TIME:
+          statusClass = 'status-on-time';
+          break;
+        case apiConfig.constants.TRAIN_STATUS.DELAYED:
+          statusClass = 'status-delayed';
+          break;
+        case apiConfig.constants.TRAIN_STATUS.CANCELLED:
+          statusClass = 'status-cancelled';
+          break;
+        case apiConfig.constants.TRAIN_STATUS.DIVERTED:
+          statusClass = 'status-diverted';
+          break;
+        default:
+          statusClass = 'status-unknown';
+      }
+      
+      // Voeg selected class toe indien deze trein is geselecteerd
+      var selectedClass = '';
+      if (train.number && selectedTrainSet && 
+          selectedTrainSet.has(String(train.number).trim()) && 
+          layout.highlightSelectedTrains) {
+        selectedClass = ' selected-train';
+      }
+      
+      // Maak de rij met juiste klassen en ID
+      var row = createElement('tr', {
+        className: statusClass + selectedClass,
+        'data-train-id': train.number
+      });
+      
+      // Voeg cellen toe
+      [
+        train.number || '',
+        train.details && train.details.type || '',
+        train.details && train.details.origin || '',
+        train.details && train.details.destination || '',
+        train.status || '',
+        (train.details && train.details.delay !== undefined ? train.details.delay : 0) + ' min',
+        (train.speed !== undefined ? Math.round(train.speed) : 0) + ' km/h'
+      ].forEach(function(cellContent) {
+        row.appendChild(createElement('td', {}, cellContent));
+      });
+      
+      tbody.appendChild(row);
+    });
+    
+    table.appendChild(tbody);
+    tableContainer.appendChild(table);
+    
+    // Voeg info toe over aantal treinen
+    var countInfo = createElement('p', {}, 
+      'Toont ' + filteredData.length + ' van ' + trainData.length + ' treinen.'
+    );
+    tableContainer.appendChild(countInfo);
+    
+    return tableContainer;
   }
 
   // Extensie definities
@@ -103,9 +313,12 @@ define([
       // Referentie naar this voor gebruik binnen functies
       var self = this;
       var app = qlik.currApp();
-
+      
       // Verwijder bestaande event handlers om memory leaks te voorkomen
       cleanupEvents($element, 'trainExt');
+      
+      // Controle op Qlik Cloud omgeving voor optimalisaties
+      var isCloud = isQlikCloudEnvironment();
 
       // Huidige selecties ophalen uit hyperCube
       var trainNumbers = self.getSelectedTrainNumbers(layout);
@@ -120,170 +333,123 @@ define([
           });
         }
         
-        // HTML voor de extensie
-        var html = '<div class="train-extension-container">';
+        // Maak de container voor de extensie
+        var container = createElement('div', {
+          className: 'train-extension-container'
+        });
         
         // Informatie sectie
-        html += '<div class="train-info-section">';
-        html += '<h2>Live Trein Tracker</h2>';
+        var infoSection = createElement('div', {
+          className: 'train-info-section'
+        });
+        
+        // Titel
+        infoSection.appendChild(createElement('h2', {}, 'Live Trein Tracker'));
         
         // Valideer API configuratie
         var apiValidation = apiConfig.validate();
         if (!apiValidation.isValid) {
-          html += '<div class="api-error">';
-          html += '<p>Er zijn problemen met de API configuratie:</p>';
-          html += '<ul>';
-          apiValidation.errors.forEach(function(error) {
-            html += '<li>' + escapeHtml(error) + '</li>';
+          // Toon API foutmeldingen
+          var errorDiv = createElement('div', {
+            className: 'api-error'
           });
-          html += '</ul>';
-          html += '<p>Controleer de instellingen in het eigenschappen paneel.</p>';
-          html += '</div>';
+          
+          errorDiv.appendChild(createElement('p', {}, 'Er zijn problemen met de API configuratie:'));
+          
+          var errorList = createElement('ul', {});
+          apiValidation.errors.forEach(function(error) {
+            errorList.appendChild(createElement('li', {}, error));
+          });
+          
+          errorDiv.appendChild(errorList);
+          errorDiv.appendChild(createElement('p', {}, 'Controleer de instellingen in het eigenschappen paneel.'));
+          
+          infoSection.appendChild(errorDiv);
         } else {
           // API configuratie is geldig, toon normale UI
           if (trainNumbers.length > 0) {
-            html += '<p>Actieve filters op treinnummers: ' + escapeHtml(trainNumbers.join(", ")) + '</p>';
+            infoSection.appendChild(createElement('p', {}, 
+              'Actieve filters op treinnummers: ' + trainNumbers.join(", ")
+            ));
             
             // Voeg knop toe om alle selecties te wissen
-            html += '<button class="qlik-button clear-button" id="clearTrainSelections">Wis selecties</button>';
+            infoSection.appendChild(createButton('Wis selecties', 'clearTrainSelections', 'clear-button'));
           } else {
-            html += '<p>Geen filters op treinnummers actief. Selecteer een treinnummer om specifieke treinen te volgen.</p>';
+            infoSection.appendChild(createElement('p', {}, 
+              'Geen filters op treinnummers actief. Selecteer een treinnummer om specifieke treinen te volgen.'
+            ));
           }
           
           // Voeg laatst bijgewerkt tijd toe indien beschikbaar
           var lastUpdate = trainDataService.getLastUpdateTime();
           if (lastUpdate) {
-            html += '<p class="last-update">Laatst bijgewerkt: ' + lastUpdate.toLocaleTimeString() + '</p>';
+            infoSection.appendChild(createElement('p', {
+              className: 'last-update'
+            }, 'Laatst bijgewerkt: ' + lastUpdate.toLocaleTimeString()));
           }
 
-          // Voeg refresh knop en auto-refresh controls toe
-          html += '<div class="refresh-controls">';
-          html += '<button class="qlik-button refresh-button" id="refreshTrainData">Ververs gegevens</button>';
-          
-          // Auto-refresh toggle knop
-          html += '<div class="auto-refresh-toggle">';
-          html += '<label for="autoRefreshToggle">Auto-refresh: </label>';
-          html += '<button class="qlik-button toggle-button' + (layout.autoRefresh ? ' active' : '') + '" id="autoRefreshToggle">' + 
-                  (layout.autoRefresh ? 'Aan' : 'Uit') + '</button>';
-          html += '</div>';
-          
-          html += '</div>';
-        }
-        
-        html += '</div>'; // Einde train-info-section
-        
-        // Flex container voor layout trein data en kaart
-        html += '<div class="train-flex-container">';
-        
-        // Trein data sectie voor het tonen van actuele gegevens
-        html += '<div class="train-data-section">';
-        html += '<h3>Actuele treingegevens</h3>';
-        
-        // Gegevens tabel voor treinlocaties
-        html += '<div class="train-data-table">';
-        
-        // Ophalen van treingegevens (direct of uit cache)
-        var trainData = trainDataService.getCachedData();
-        
-        if (trainData && trainData.length > 0) {
-          // Toon treingegevens in een tabel
-          html += '<table>';
-          html += '<thead><tr>';
-          html += '<th>Treinnr</th>';
-          html += '<th>Type</th>';
-          html += '<th>Herkomst</th>';
-          html += '<th>Bestemming</th>';
-          html += '<th>Status</th>';
-          html += '<th>Vertraging</th>';
-          html += '<th>Snelheid</th>';
-          html += '</tr></thead>';
-          html += '<tbody>';
-          
-          // Filter de gegevens op basis van geselecteerde treinnummers indien nodig
-          var filteredData = trainData;
-          if (trainNumbers.length > 0 && layout.filterBySelection) {
-            // Gebruik een Set voor efficiëntere lookups
-            var selectedTrainSet = new Set(trainNumbers.map(function(num) {
-              return String(num).trim();
-            }));
-            
-            filteredData = trainData.filter(function(train) {
-              return train.number && selectedTrainSet.has(String(train.number).trim());
-            });
-          }
-          
-          // Toon maximaal het aantal ingestelde treinen
-          var maxTrainsToShow = layout.maxTrainsToShow || 50;
-          filteredData = filteredData.slice(0, maxTrainsToShow);
-          
-          // Bouw de tabelrijen
-          filteredData.forEach(function(train) {
-            var statusClass = '';
-            switch (train.status) {
-              case apiConfig.constants.TRAIN_STATUS.ON_TIME:
-                statusClass = 'status-on-time';
-                break;
-              case apiConfig.constants.TRAIN_STATUS.DELAYED:
-                statusClass = 'status-delayed';
-                break;
-              case apiConfig.constants.TRAIN_STATUS.CANCELLED:
-                statusClass = 'status-cancelled';
-                break;
-              case apiConfig.constants.TRAIN_STATUS.DIVERTED:
-                statusClass = 'status-diverted';
-                break;
-              default:
-                statusClass = 'status-unknown';
-            }
-            
-            // Voeg selected class toe indien deze trein is geselecteerd
-            var selectedClass = '';
-            if (train.number && selectedTrainSet && selectedTrainSet.has(String(train.number).trim()) && layout.highlightSelectedTrains) {
-              selectedClass = ' selected-train';
-            }
-            
-            // Zorg ervoor dat alles geescaped wordt
-            var trainNumber = escapeHtml(train.number);
-            var trainType = escapeHtml(train.details && train.details.type || '');
-            var trainOrigin = escapeHtml(train.details && train.details.origin || '');
-            var trainDestination = escapeHtml(train.details && train.details.destination || '');
-            var trainStatus = escapeHtml(train.status || '');
-            var trainDelay = train.details && train.details.delay !== undefined ? train.details.delay : 0;
-            var trainSpeed = train.speed !== undefined ? Math.round(train.speed) : 0;
-            
-            html += '<tr class="' + statusClass + selectedClass + '" data-train-id="' + trainNumber + '">';
-            html += '<td>' + trainNumber + '</td>';
-            html += '<td>' + trainType + '</td>';
-            html += '<td>' + trainOrigin + '</td>';
-            html += '<td>' + trainDestination + '</td>';
-            html += '<td>' + trainStatus + '</td>';
-            html += '<td>' + trainDelay + ' min</td>';
-            html += '<td>' + trainSpeed + ' km/h</td>';
-            html += '</tr>';
+          // Voeg refresh controls toe
+          var refreshControls = createElement('div', {
+            className: 'refresh-controls'
           });
           
-          html += '</tbody></table>';
+          // Refresh knop
+          refreshControls.appendChild(createButton('Ververs gegevens', 'refreshTrainData', 'refresh-button'));
           
-          // Toon het aantal gevonden treinen
-          html += '<p>Toont ' + filteredData.length + ' van ' + trainData.length + ' treinen.</p>';
+          // Auto-refresh toggle
+          var autoRefreshToggle = createElement('div', {
+            className: 'auto-refresh-toggle'
+          });
           
-        } else {
-          html += '<p>Geen treingegevens beschikbaar. Klik op "Ververs gegevens" om gegevens op te halen.</p>';
+          autoRefreshToggle.appendChild(createElement('label', {
+            htmlFor: 'autoRefreshToggle'
+          }, 'Auto-refresh: '));
+          
+          var toggleClass = 'qlik-button toggle-button' + (layout.autoRefresh ? ' active' : '');
+          autoRefreshToggle.appendChild(createButton(
+            layout.autoRefresh ? 'Aan' : 'Uit', 
+            'autoRefreshToggle', 
+            toggleClass
+          ));
+          
+          refreshControls.appendChild(autoRefreshToggle);
+          infoSection.appendChild(refreshControls);
         }
         
-        html += '</div>'; // Einde train-data-table
+        container.appendChild(infoSection);
         
-        html += '</div>'; // Einde train-data-section
+        // Flex container voor layout trein data en kaart
+        var flexContainer = createElement('div', {
+          className: 'train-flex-container'
+        });
+        
+        // Trein data sectie
+        var dataSection = createElement('div', {
+          className: 'train-data-section'
+        });
+        
+        dataSection.appendChild(createElement('h3', {}, 'Actuele treingegevens'));
+        
+        // Haal treingegevens op (direct of uit cache)
+        var trainData = trainDataService.getCachedData();
+        
+        // Bouw de trein tabel en voeg toe aan de data sectie
+        dataSection.appendChild(buildTrainTable(trainData, trainNumbers, layout));
+        
+        // Voeg data sectie toe aan de flex container
+        flexContainer.appendChild(dataSection);
         
         // Kaart container
-        html += '<div id="train-map-container" class="train-map-container"></div>';
+        var mapContainer = createElement('div', {
+          id: 'train-map-container',
+          className: 'train-map-container'
+        });
         
-        html += '</div>'; // Einde train-flex-container
+        flexContainer.appendChild(mapContainer);
+        container.appendChild(flexContainer);
         
-        html += '</div>'; // Einde train-extension-container
-
-        // Weergeven in het element
-        $element.html(html);
+        // Leeg het element en voeg nieuwe container toe
+        $element.empty().append(container);
         
         // Initialiseer de kaart als API configuratie geldig is
         if (apiValidation.isValid) {
@@ -297,14 +463,17 @@ define([
           // Configureer animatie instellingen
           self.configureAnimationSettings(layout);
           
-          // Registreer event handlers met namespace voor betere cleanup
-          $element.find('#refreshTrainData').on('click.trainExt', function() {
+          // Event delegatie gebruiken voor betere performance in Qlik Cloud
+          var $container = $element.find('.train-extension-container');
+          
+          // Gebruik event delegatie voor buttons en tabel
+          $container.on('click.trainExt', '#refreshTrainData', function() {
             var currentTrainNumbers = self.getSelectedTrainNumbers(self.$scope.layout);
             self.refreshTrainData(currentTrainNumbers, $element);
           });
           
           // Event handler voor de auto-refresh toggle
-          $element.find('#autoRefreshToggle').on('click.trainExt', function() {
+          $container.on('click.trainExt', '#autoRefreshToggle', function() {
             // Toggle auto-refresh status
             self.$scope.layout.autoRefresh = !self.$scope.layout.autoRefresh;
             
@@ -321,13 +490,13 @@ define([
           });
           
           // Event handler voor wissen van selecties
-          $element.find('#clearTrainSelections').on('click.trainExt', function() {
+          $container.on('click.trainExt', '#clearTrainSelections', function() {
             self.clearSelections();
           });
           
           // Event handlers voor tabelrijen (trein selecteren)
           if (layout.selectionMode !== 'none') {
-            $element.find('table tbody tr').on('click.trainExt', function() {
+            $container.on('click.trainExt', 'table tbody tr', function() {
               var trainId = $(this).data('train-id');
               if (trainId) {
                 self.selectTrain(trainId, layout.selectionMode === 'multiple');
@@ -445,7 +614,7 @@ define([
         map, 
         filteredTrainData, 
         selectedTrainIds, 
-        this.selectTrain.bind(this, selectedTrainIds, layout.selectionMode === 'multiple')
+        this.selectTrain.bind(this)
       );
     },
     
@@ -656,13 +825,14 @@ define([
         
         switch ($scope.layout.refreshIntervalType) {
           case 'fast':
-            return 5;
+            return isQlikCloudEnvironment() ? 10 : 5; // Minimum 10s in Qlik Cloud
           case 'normal':
             return 15;
           case 'slow':
             return 30;
           case 'custom':
-            return Math.max(5, Math.min(300, $scope.layout.refreshInterval || 15));
+            var interval = Math.max(5, Math.min(300, $scope.layout.refreshInterval || 15));
+            return isQlikCloudEnvironment() ? Math.max(10, interval) : interval; // Minimum 10s in Qlik Cloud
           default:
             return 15;
         }
@@ -845,10 +1015,10 @@ define([
         });
       }
       
-      // Registreer resize handler met namespace
+      // Registreer window event handlers met delegatie en namespace voor betere performance
       $(window).on('resize.trainExtension', $scope.handleResize);
       
-      // Registreer visibility change handler voor browser tab wisselen
+      // Registreer document event handlers
       $(document).on('visibilitychange.trainExtension', $scope.handleVisibilityChange);
 
       // Opruimen bij verwijderen van de extensie
@@ -856,7 +1026,7 @@ define([
         // Stop automatische verversing
         $scope.stopAutoRefresh();
         
-        // Verwijder event handlers
+        // Verwijder event handlers met namespaces
         $(window).off('resize.trainExtension');
         $(document).off('visibilitychange.trainExtension');
         
