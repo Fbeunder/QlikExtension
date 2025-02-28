@@ -30,30 +30,47 @@ Deze extensie maakt het mogelijk om real-time treinposities te visualiseren in Q
 
 ## Installatie
 
-### Via QMC (Qlik Management Console)
+### Voor gebruikers
 
-1. Download de laatste release van de extensie (zip-bestand)
-2. Open Qlik Management Console (QMC)
-3. Navigeer naar Extensions
-4. Klik op Import
-5. Selecteer het gedownloade zip-bestand
-6. Klik op Import
+1. Download de laatste release van de extensie (zip-bestand) uit de [releases pagina](https://github.com/Fbeunder/QlikExtension/releases)
+2. Installeer het zip-bestand in uw Qlik Sense omgeving:
 
-### Via Qlik Cloud
+#### Via QMC (Qlik Management Console)
+1. Open Qlik Management Console (QMC)
+2. Navigeer naar Extensions
+3. Klik op Import
+4. Selecteer het gedownloade zip-bestand
+5. Klik op Import
 
-1. Download de laatste release van de extensie (zip-bestand)
-2. Log in op uw Qlik Cloud tenant
-3. Ga naar de Management Console
-4. Selecteer "Extensions" onder "Content"
-5. Klik op "Add" en selecteer het gedownloade zip-bestand
-6. Klik op "Upload en activeer"
+#### Via Qlik Cloud
+1. Log in op uw Qlik Cloud tenant
+2. Ga naar de Management Console
+3. Selecteer "Extensions" onder "Content"
+4. Klik op "Add" en selecteer het gedownloade zip-bestand
+5. Klik op "Upload en activeer"
 
-### Handmatige installatie (ontwikkelaars)
+### Voor ontwikkelaars
 
+#### Handmatige installatie
 1. Clone deze repository
 2. Kopieer de `LiveTrainExtension` map naar de Qlik Sense Extensions directory:
    - Windows (Desktop): `C:\\Users\\[USERNAME]\\Documents\\Qlik\\Sense\\Extensions\\`
    - Qlik Sense Server: `C:\\Program Files\\Qlik\\Sense\\Extensions\\`
+
+#### Bouwen vanuit broncode
+1. Zorg dat Node.js is geïnstalleerd op uw systeem
+2. Clone deze repository
+3. Voer de volgende commando's uit in de hoofdmap van het project:
+
+```bash
+# Installeer benodigde afhankelijkheden
+npm install
+
+# Bouw de extensie
+npm run build
+```
+
+Dit zal een `dist` map aanmaken met daarin een zip-bestand dat klaar is voor distributie en installatie in Qlik Sense.
 
 ## API Key Configuratie
 
@@ -180,6 +197,23 @@ De extensie is geoptimaliseerd voor Qlik Cloud met de volgende verbeteringen:
 - Gebruik HTTPS voor alle externe resources
 - Zie `EXTERNAL_LIBRARIES.md` voor gedetailleerde bundeling-instructies
 
+## Versie beheer en releases
+
+De extensie volgt [Semantic Versioning](https://semver.org/) (SemVer) voor versies:
+
+- **Major versie (1.x.x)**: Incompatibele API wijzigingen
+- **Minor versie (x.1.x)**: Functionaliteit toevoegingen op een backwards-compatible manier
+- **Patch versie (x.x.1)**: Backwards-compatible bug fixes
+
+Voor elke wijziging wordt een entry toegevoegd aan het `CHANGELOG.md` bestand. Releases worden gegenereerd met behulp van het build-script dat een distribueerbaar zip-bestand maakt.
+
+### Een nieuwe release maken
+
+1. Update versienummer in `package.json`
+2. Voeg wijzigingen toe aan `CHANGELOG.md`
+3. Voer `npm run build` uit
+4. Het resulterende zip-bestand in de `dist` map kan worden gedeeld en geïnstalleerd
+
 ## Bekende problemen en oplossingen
 
 ### CORS beperkingen
@@ -226,6 +260,9 @@ LiveTrainExtension/
 ├── propertyPanel.js              # Eigenschappen paneel
 ├── QLIK_CLOUD_COMPATIBILITY.md   # Documentatie voor Qlik Cloud compatibiliteit
 ├── EXTERNAL_LIBRARIES.md         # Instructies voor bundelen van bibliotheken
+├── CHANGELOG.md                  # Wijzigingsgeschiedenis
+├── package.json                  # Project metadata en scripts
+├── build.js                      # Build script voor distributie
 ├── api/
 │   ├── trainDataService.js       # Service voor het ophalen van treingegevens
 │   ├── apiConfig.js              # API configuratie en endpoints
@@ -247,15 +284,17 @@ LiveTrainExtension/
 - **jQuery**: Voor DOM manipulatie en AJAX requests
 - **Qlik API**: Voor integratie met Qlik Sense
 - **NS API**: Voor het ophalen van treingegevens
+- **Node.js**: Voor het build proces en externe bibliotheken (alleen voor ontwikkeling)
 
 ### Ontwikkeling en aanpassingen
 
 1. Clone de repository
-2. Maak een apiKey.js bestand op basis van het template met uw eigen API sleutel
-3. Wijzig bestanden naar wens
-4. Test de extensie in Qlik Sense Desktop
-5. Voor Qlik Cloud compatibiliteit, volg de instructies in QLIK_CLOUD_COMPATIBILITY.md
-6. Verpak (zip) voor distributie (apiKey.js wordt automatisch uitgesloten via .gitignore)
+2. Voer `npm install` uit om afhankelijkheden te installeren
+3. Maak een apiKey.js bestand op basis van het template met uw eigen API sleutel
+4. Wijzig bestanden naar wens
+5. Test de extensie in Qlik Sense Desktop
+6. Gebruik `npm run build` om een distribueerbaar pakket te maken
+7. Voor Qlik Cloud compatibiliteit, volg de instructies in QLIK_CLOUD_COMPATIBILITY.md
 
 ### Debuggen
 
