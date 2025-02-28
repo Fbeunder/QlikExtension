@@ -1,0 +1,16 @@
+# Specifieke bestanden uitsluiten
+LiveTrainExtension/api/apiKey.js
+
+# Node modules
+node_modules/
+
+# IDE bestanden
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Overige bestanden
+.DS_Store
+Thumbs.db
+*.log
