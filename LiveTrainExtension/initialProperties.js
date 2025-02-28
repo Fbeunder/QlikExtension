@@ -16,6 +16,11 @@ define([], function() {
       }]
     },
     
+    // API Configuratie
+    apiKey: '',
+    useCorsProxy: false,
+    corsProxyUrl: '',
+    
     // Interactie instellingen
     selectionMode: 'click',
     allowSelectionFromMap: true,
@@ -24,12 +29,13 @@ define([], function() {
     
     // Kaart instellingen
     defaultZoom: 7,
-    defaultCenter: {
-      lat: 52.1326,
-      lng: 5.2913
-    },
+    minZoom: 6,
+    maxZoom: 18,
+    defaultLat: 52.1326,
+    defaultLng: 5.2913,
     followSelectedTrains: true,
     maxTrainsToShow: 50,
+    showScale: true,
     
     // Update instellingen
     autoRefresh: true,
@@ -38,13 +44,17 @@ define([], function() {
     pauseRefreshWhenNotVisible: true,
     refreshOnSelection: true,
     showUpdateIndicator: true,
+    updateTableOnRefresh: false, // Alleen tabel bijwerken bij handmatige verversing
     
     // Animatie instellingen
     animateUpdates: true,
     animationDuration: 1000, // Milliseconden
+    animationEasing: 'linear', // 'linear', 'easeIn', 'easeOut', 'easeInOut'
+    animationSmoothness: 1, // Factor voor vloeiendheid (1-3)
     
     // Data instellingen
     maxResults: 100,
-    filterBySelection: false
+    filterBySelection: false,
+    trainNumberFieldName: '' // Veldnaam voor treinnummers
   };
 });
