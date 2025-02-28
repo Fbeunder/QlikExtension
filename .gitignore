@@ -1,16 +1,31 @@
-# Specifieke bestanden uitsluiten
-LiveTrainExtension/api/apiKey.js
-
-# Node modules
+# Node.js
 node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
 
-# IDE bestanden
+# Build output
+dist/
+
+# API Keys - never commit these
+api/apiKey.js
+
+# IDE files
 .idea/
 .vscode/
 *.sublime-project
 *.sublime-workspace
 
-# Overige bestanden
+# OS generated files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
+
+# Temporary files
+*.tmp
 *.log
+*.bak
