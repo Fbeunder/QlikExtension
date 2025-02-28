@@ -36,7 +36,7 @@ LiveTrainExtension/
 ## 3. Modules
 
 ### 3.1 LiveTrainExtension.js
-* **Status**: Voltooid - Geïntegreerd met trainDataService, selectiemogelijkheden, mapRenderer, trainVisualizer, en dynamische updates. Functionele fouten opgelost waaronder memory leaks, XSS-kwetsbaarheden, inefficiënte filtering, race conditions, betere foutafhandeling en problemen met object referenties in de Angular scope. Geoptimaliseerd voor Qlik Cloud met verbeterde DOM-manipulatie, event delegatie en CSP-naleving.
+* **Status**: Voltooid - Geïntegreerd met trainDataService, selectiemogelijkheden, mapRenderer, trainVisualizer, en dynamische updates. Functionele fouten opgelost waaronder memory leaks, XSS-kwetsbaarheden, inefficiënte filtering, race conditions, betere foutafhandeling en problemen met object referenties in de Angular scope. Geoptimaliseerd voor Qlik Cloud met verbeterde DOM-manipulatie, event delegatie en CSP-naleving. Bug gerepareerd met betrekking tot object referenties in de startAutoRefresh functie.
 * **Bestandsnaam**: LiveTrainExtension.js
 * **Functionaliteit**: Hoofdmodule die de extensie initialiseert en integreert met Qlik Sense
 * **Belangrijkste functies**:
@@ -367,7 +367,7 @@ LiveTrainExtension/
 * **Belangrijkste functies**: N.v.t. (Markdown documentatie bestand)
 
 ### 3.15 CHANGELOG.md
-* **Status**: Voltooid - Bijgewerkt met versie 1.0.2 details
+* **Status**: Voltooid - Bijgewerkt met versie 1.0.3 details
 * **Bestandsnaam**: CHANGELOG.md
 * **Functionaliteit**: Wijzigingsgeschiedenis en versie-informatie
 * **Belangrijkste functies**: N.v.t. (Markdown documentatie bestand)
@@ -409,7 +409,7 @@ LiveTrainExtension/
 
 ## 4. Status
 Voltooide modules:
-- LiveTrainExtension.js (geoptimaliseerd met verbeterde event handling, XSS-beveiliging, efficiëntere filtering, betere foutafhandeling en Qlik Cloud compatibiliteit, bugfix voor object referentie probleem in Animation Settings)
+- LiveTrainExtension.js (geoptimaliseerd met verbeterde event handling, XSS-beveiliging, efficiëntere filtering, betere foutafhandeling en Qlik Cloud compatibiliteit, bugfixes voor object referentie problemen en startAutoRefresh functie)
 - LiveTrainExtension.qext
 - initialProperties.js (uitgebreid met standaardwaarden voor dynamische updates)
 - propertyPanel.js (uitgebreid met configuratie-opties voor dynamische updates en animatie)
@@ -425,7 +425,7 @@ Voltooide modules:
 - .gitignore (toegevoegd om apiKey.js uit te sluiten van versiecontrole)
 - QLIK_CLOUD_COMPATIBILITY.md (nieuw: documentatie over Qlik Cloud compatibiliteit)
 - EXTERNAL_LIBRARIES.md (nieuw: instructies voor het bundelen van externe bibliotheken)
-- CHANGELOG.md (bijgewerkt met versie 1.0.2 details)
+- CHANGELOG.md (bijgewerkt met versie 1.0.3 details)
 - package.json (nieuw: project metadata, dependencies en script configuratie)
 - build.js (nieuw: geautomatiseerd build script voor distributie)
 
@@ -441,6 +441,7 @@ Alle modules zijn nu volledig geïmplementeerd, geïntegreerd en geoptimaliseerd
 - TypeErrors door onjuiste objectreferenties in Angular scope
 - ReferenceError door undefined trainNumbers parameter in fetchWithFetch functie
 - Incorrecte regex patronen in calculateDelayInMinutes functie
+- Object referentie fouten in startAutoRefresh functie
 
 De extensie is nu ook volledig compatibel gemaakt met Qlik Cloud door:
 - Verbeterde API key management met ondersteuning voor Qlik variabelen
@@ -473,6 +474,7 @@ Bovendien is een volledig geautomatiseerd build systeem geïmplementeerd waarmee
 15. ✅ Bugfix voor object referentie probleem in Animation Settings - opgelost
 16. ✅ Bugfix voor ReferenceError door undefined trainNumbers parameter in fetchWithFetch functie - opgelost
 17. ✅ Bugfix voor incorrecte regex patronen in calculateDelayInMinutes functie - opgelost
+18. ✅ Bugfix voor object referentie probleem in startAutoRefresh functie - opgelost
 
 Alle must-have functionaliteiten zijn nu geïmplementeerd, getest en geoptimaliseerd. De extensie is volledig functioneel, veilig en efficiënt voor gebruik in productieomgevingen, inclusief Qlik Cloud. Daarnaast is een geautomatiseerd build proces opgezet voor het genereren van productieklare distributiepakketten.
 
