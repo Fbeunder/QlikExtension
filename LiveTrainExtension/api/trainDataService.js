@@ -139,10 +139,10 @@ define(['jquery', './apiConfig', 'qlik'], function($, apiConfig, qlik) {
       // Bepaal of we fetch of ajax gebruiken
       if (window.fetch && !usePolyfillFetch) {
         // Modern: Gebruik fetch API
-        return fetchWithFetch(url, params);
+        return fetchWithFetch(url, params, trainNumbers);
       } else {
         // Legacy: Gebruik jQuery AJAX
-        return fetchWithAjax(url, params);
+        return fetchWithAjax(url, params, trainNumbers);
       }
     }
     
@@ -150,9 +150,10 @@ define(['jquery', './apiConfig', 'qlik'], function($, apiConfig, qlik) {
      * Fetch implementatie met moderne fetch API
      * @param {string} url - De API URL
      * @param {Object} params - Query parameters
+     * @param {Array} trainNumbers - Array met treinnummers voor filtering in de resultaten
      * @returns {Promise} Promise met respons data
      */
-    function fetchWithFetch(url, params) {
+    function fetchWithFetch(url, params, trainNumbers) {
       // Converteer params naar query string
       var queryString = Object.keys(params)
         .map(function(key) {
@@ -220,9 +221,10 @@ define(['jquery', './apiConfig', 'qlik'], function($, apiConfig, qlik) {
      * Fetch implementatie met jQuery ajax
      * @param {string} url - De API URL
      * @param {Object} params - Query parameters
+     * @param {Array} trainNumbers - Array met treinnummers voor filtering in de resultaten
      * @returns {Promise} Promise met respons data
      */
-    function fetchWithAjax(url, params) {
+    function fetchWithAjax(url, params, trainNumbers) {
       // Verbeterde ajax opties voor Qlik Cloud
       var ajaxOptions = {
         url: url,
@@ -512,13 +514,13 @@ define(['jquery', './apiConfig', 'qlik'], function($, apiConfig, qlik) {
       
       try {
         // Extraheer de minuten uit de ISO8601 duration string
-        var minutesMatch = delayString.match(/PT(\\d+)M/);
+        var minutesMatch = delayString.match(/PT(\d+)M/);
         if (minutesMatch && minutesMatch[1]) {
           return parseInt(minutesMatch[1], 10);
         }
         
         // Probeer ook uren te extraheren indien aanwezig (bijv. PT1H30M)
-        var hoursMatch = delayString.match(/PT(\\d+)H/);
+        var hoursMatch = delayString.match(/PT(\d+)H/);
         if (hoursMatch && hoursMatch[1]) {
           var hours = parseInt(hoursMatch[1], 10);
           // Converteer uren naar minuten en voeg eventuele minuten toe
