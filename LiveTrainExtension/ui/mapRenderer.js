@@ -5,8 +5,9 @@
 define([
   'jquery',
   '../lib/js/qlik-style',
-  'qlik'
-], function($, QlikStyle, qlik) {
+  'qlik',
+  '../lib/leaflet/leaflet' // Direct import of bundled leaflet library
+], function($, QlikStyle, qlik, L) { // Note: L is now explicitly included as a parameter
   'use strict';
   
   // Map object reference
@@ -23,7 +24,8 @@ define([
   // Event handler tracking
   var registeredEventHandlers = [];
   
-  // Leaflet beschikbaarheid controleren
+  // Leaflet beschikbaarheid controleren - niet meer nodig omdat we Leaflet direct importeren
+  // maar behouden voor backward compatibility
   var isLeafletAvailable = function() {
     return typeof L !== 'undefined';
   };
