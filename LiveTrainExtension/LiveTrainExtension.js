@@ -451,6 +451,9 @@ define([
         // Leeg het element en voeg nieuwe container toe
         $element.empty().append(container);
         
+        // Sla een referentie op naar dit object voor het autorefresh systeem
+        $element.data('extensionInstance', this);
+        
         // Initialiseer de kaart als API configuratie geldig is
         if (apiValidation.isValid) {
           self.initMap($element, layout);
@@ -876,67 +879,88 @@ define([
         // Stop eerst eventuele bestaande timer
         $scope.stopAutoRefresh();
         
+        // Sla een referentie naar self-object op voor gebruik in callback
+        var extensionInstance = self;
+
         // Start verversing met callback
         trainDataService.startAutoRefresh(function(data) {
           // Check of de layout en object nog bestaan
           if (!$scope.layout) return;
           
-          // Verkrijg de juiste referentie naar het object met de getSelectedTrainNumbers functie
+          // Verbeterde logica voor het vinden van de juiste objectreferentie
           var obj = null;
           
-          // Probeer eerst vanuit de parent scope
-          if ($scope.$parent && $scope.$parent.object && 
-              typeof $scope.$parent.object.getSelectedTrainNumbers === 'function') {
+          // Methode 1: Gebruik de opgeslagen extensionInstance die we zojuist hebben opgeslagen
+          if (extensionInstance && typeof extensionInstance.getSelectedTrainNumbers === 'function') {
+            obj = extensionInstance;
+          }
+          // Methode 2: Gebruik de extensie-instance die we hebben opgeslagen in het element
+          else if ($element && $element.data('extensionInstance') && 
+                  typeof $element.data('extensionInstance').getSelectedTrainNumbers === 'function') {
+            obj = $element.data('extensionInstance');
+          }
+          // Methode 3: Probeer via de parent scope
+          else if ($scope.$parent && $scope.$parent.object && 
+                  typeof $scope.$parent.object.getSelectedTrainNumbers === 'function') {
             obj = $scope.$parent.object;
-          } 
-          // Als fallback, gebruik het object dat hangt aan $element.data('object')
+          }
+          // Methode 4: Probeer via $element.data('object')
           else if ($element && $element.data && typeof $element.data === 'function') {
             obj = $element.data('object');
-            // Controleer of dit object de benodigde methode heeft
             if (!obj || typeof obj.getSelectedTrainNumbers !== 'function') {
-              // Laatste poging: gebruik $scope.$parent.$parent.object
-              if ($scope.$parent && $scope.$parent.$parent && $scope.$parent.$parent.object &&
-                  typeof $scope.$parent.$parent.object.getSelectedTrainNumbers === 'function') {
-                obj = $scope.$parent.$parent.object;
-              } else {
-                console.error('Geen geldig object met getSelectedTrainNumbers functie gevonden');
-                return;
-              }
+              obj = null;
             }
           }
+          // Methode 5: Probeer via de grootouder-scope als laatste poging
+          else if ($scope.$parent && $scope.$parent.$parent && $scope.$parent.$parent.object &&
+                 typeof $scope.$parent.$parent.object.getSelectedTrainNumbers === 'function') {
+            obj = $scope.$parent.$parent.object;
+          }
           
+          // Controleer of we een geldig object hebben gevonden
           if (!obj) {
-            console.error('Kan geen geldig object vinden met getSelectedTrainNumbers functie');
+            console.error('Kan geen geldig object vinden met getSelectedTrainNumbers functie. ' + 
+                          'Auto-refresh stopt totdat het probleem is opgelost.');
+            $scope.stopAutoRefresh();
             return;
           }
           
-          // Update train markers bij nieuwe data
-          var currentTrainNumbers = obj.getSelectedTrainNumbers($scope.layout);
-          obj.updateTrainVisualization(data, currentTrainNumbers, $scope.layout);
-          
-          // Update het tijdstip van laatste update in de UI via de scope
-          var lastUpdate = trainDataService.getLastUpdateTime();
-          if (lastUpdate) {
-            $scope.lastUpdateTime = lastUpdate.toLocaleTimeString();
+          try {
+            // Update train markers bij nieuwe data
+            var currentTrainNumbers = obj.getSelectedTrainNumbers($scope.layout);
+            obj.updateTrainVisualization(data, currentTrainNumbers, $scope.layout);
             
-            // Update binnen Angular digest cycle
-            $scope.$applyAsync(function() {
-              var $lastUpdateEl = $element.find('.last-update');
-              if ($lastUpdateEl.length) {
-                $lastUpdateEl.text('Laatst bijgewerkt: ' + $scope.lastUpdateTime);
-              }
-            });
-          }
-          
-          // Bij elke update de extensie opnieuw renderen als dat nodig is
-          // We gebruiken applyAsync om beter te presteren met veel updates
-          if (self.$scope && self.$scope.layout && self.$scope.layout.updateTableOnRefresh) {
-            $scope.$applyAsync(function() {
-              if ($scope.layout && $scope.layout.autoRefresh) {
-                // Gebruik het eerder gevonden object
-                obj.paint($element, $scope.layout);
-              }
-            });
+            // Update het tijdstip van laatste update in de UI via de scope
+            var lastUpdate = trainDataService.getLastUpdateTime();
+            if (lastUpdate) {
+              $scope.lastUpdateTime = lastUpdate.toLocaleTimeString();
+              
+              // Update binnen Angular digest cycle
+              $scope.$applyAsync(function() {
+                var $lastUpdateEl = $element.find('.last-update');
+                if ($lastUpdateEl.length) {
+                  $lastUpdateEl.text('Laatst bijgewerkt: ' + $scope.lastUpdateTime);
+                }
+              });
+            }
+            
+            // Bij elke update de extensie opnieuw renderen als dat nodig is
+            // We gebruiken applyAsync om beter te presteren met veel updates
+            if (self.$scope && self.$scope.layout && self.$scope.layout.updateTableOnRefresh) {
+              $scope.$applyAsync(function() {
+                if ($scope.layout && $scope.layout.autoRefresh) {
+                  // Gebruik het eerder gevonden object
+                  obj.paint($element, $scope.layout);
+                }
+              });
+            }
+          } catch (err) {
+            console.error('Fout in autoRefresh callback:', err);
+            // Als we een ernstige fout krijgen, stoppen we de autorefresh om oneindige fouten te voorkomen
+            if (err.toString().indexOf('TypeError') !== -1) {
+              console.warn('Auto-refresh gestopt vanwege TypeError. Start handmatig opnieuw.');
+              $scope.stopAutoRefresh();
+            }
           }
         }, refreshInterval);
       };
@@ -995,13 +1019,24 @@ define([
       $scope.$watchGroup(['layout.animateUpdates', 'layout.animationDuration', 'layout.animationEasing', 'layout.animationSmoothness'], function() {
         // Update animatie instellingen
         if ($scope.layout) {
-          // Gebruik de extensie instance direct in plaats van via parent scope
-          // FIX: Vervang $scope.$parent.object door this.$parent om TypeError op te lossen
-          var extensionInstance = $element.data('object');
+          // Verbeterde object referentie zoeken
+          var extensionInstance = null;
+          
+          // Probeer eerst via de data attribute die we hebben ingesteld in paint
+          if ($element.data('extensionInstance')) {
+            extensionInstance = $element.data('extensionInstance');
+          } 
+          // Als fallback, zoek in parent scope of element data
+          else if ($element.data('object')) {
+            extensionInstance = $element.data('object');
+          }
+          
+          // Als we een geldige instance hebben gevonden, gebruik die
           if (extensionInstance && typeof extensionInstance.configureAnimationSettings === 'function') {
             extensionInstance.configureAnimationSettings($scope.layout);
           } else {
-            // Alternatieve oplossing als data('object') niet beschikbaar is
+            // Alternatieve oplossing als object niet beschikbaar is
+            // Configureer direct via trainVisualizer
             trainVisualizer.configureAnimation({
               enabled: $scope.layout.animateUpdates !== undefined ? $scope.layout.animateUpdates : true,
               duration: $scope.layout.animationDuration || 1000,
