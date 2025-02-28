@@ -16,6 +16,21 @@ define([
 ], function(qlik, $, initialProperties, propertyPanel, QlikStyle, trainDataService, apiConfig, mapRenderer, trainVisualizer) {
   'use strict';
 
+  /**
+   * Helper functie om tekst te escapen voor gebruik in HTML
+   * @param {string} str - String om te escapen
+   * @returns {string} - Geescapede string
+   */
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
   // Extensie definities
   return {
     definition: propertyPanel.getDefinition(),
@@ -30,6 +45,12 @@ define([
       var self = this;
       var app = qlik.currApp();
 
+      // Verwijder bestaande event handlers om memory leaks te voorkomen
+      $element.find('#refreshTrainData').off('click');
+      $element.find('#autoRefreshToggle').off('click');
+      $element.find('#clearTrainSelections').off('click');
+      $element.find('table tbody tr').off('click');
+
       // Huidige selecties ophalen uit hyperCube
       var trainNumbers = self.getSelectedTrainNumbers(layout);
       
@@ -41,7 +62,7 @@ define([
       html += '<h2>Live Trein Tracker</h2>';
       
       if (trainNumbers.length > 0) {
-        html += '<p>Actieve filters op treinnummers: ' + trainNumbers.join(", ") + '</p>';
+        html += '<p>Actieve filters op treinnummers: ' + escapeHtml(trainNumbers.join(", ")) + '</p>';
         
         // Voeg knop toe om alle selecties te wissen
         html += '<button class="qlik-button clear-button" id="clearTrainSelections">Wis selecties</button>';
@@ -100,8 +121,10 @@ define([
         // Filter de gegevens op basis van geselecteerde treinnummers indien nodig
         var filteredData = trainData;
         if (trainNumbers.length > 0) {
+          // Gebruik een Set voor efficiëntere lookups
+          var selectedTrainSet = new Set(trainNumbers);
           filteredData = trainData.filter(function(train) {
-            return trainNumbers.indexOf(train.number) !== -1;
+            return selectedTrainSet.has(train.number);
           });
         }
         
@@ -128,18 +151,27 @@ define([
           
           // Voeg selected class toe indien deze trein is geselecteerd
           var selectedClass = '';
-          if (trainNumbers.indexOf(train.number) !== -1 && layout.highlightSelectedTrains) {
+          if (selectedTrainSet.has(train.number) && layout.highlightSelectedTrains) {
             selectedClass = ' selected-train';
           }
           
-          html += '<tr class="' + statusClass + selectedClass + '" data-train-id="' + train.number + '">';
-          html += '<td>' + train.number + '</td>';
-          html += '<td>' + train.details.type + '</td>';
-          html += '<td>' + train.details.origin + '</td>';
-          html += '<td>' + train.details.destination + '</td>';
-          html += '<td>' + train.status + '</td>';
-          html += '<td>' + train.details.delay + ' min</td>';
-          html += '<td>' + Math.round(train.speed) + ' km/h</td>';
+          // Zorg ervoor dat alles geescaped wordt
+          var trainNumber = escapeHtml(train.number);
+          var trainType = escapeHtml(train.details.type || '');
+          var trainOrigin = escapeHtml(train.details.origin || '');
+          var trainDestination = escapeHtml(train.details.destination || '');
+          var trainStatus = escapeHtml(train.status || '');
+          var trainDelay = train.details.delay !== undefined ? train.details.delay : 0;
+          var trainSpeed = train.speed !== undefined ? Math.round(train.speed) : 0;
+          
+          html += '<tr class="' + statusClass + selectedClass + '" data-train-id="' + trainNumber + '">';
+          html += '<td>' + trainNumber + '</td>';
+          html += '<td>' + trainType + '</td>';
+          html += '<td>' + trainOrigin + '</td>';
+          html += '<td>' + trainDestination + '</td>';
+          html += '<td>' + trainStatus + '</td>';
+          html += '<td>' + trainDelay + ' min</td>';
+          html += '<td>' + trainSpeed + ' km/h</td>';
           html += '</tr>';
         });
         
@@ -178,8 +210,10 @@ define([
       self.configureAnimationSettings(layout);
       
       // Registreer event handlers
+      // Gebruik closure die de huidige waarde ophaalt bij aanroep, om up-to-date data te garanderen
       $element.find('#refreshTrainData').on('click', function() {
-        self.refreshTrainData(trainNumbers, $element);
+        var currentTrainNumbers = self.getSelectedTrainNumbers(self.$scope.layout);
+        self.refreshTrainData(currentTrainNumbers, $element);
       });
       
       // Event handler voor de auto-refresh toggle
@@ -227,6 +261,7 @@ define([
      * @param {Object} layout - Layout object met configuratie
      */
     initMap: function($element, layout) {
+      var self = this;
       var mapContainer = $element.find('#train-map-container')[0];
       
       if (!mapContainer) {
@@ -243,11 +278,19 @@ define([
       // Initialiseer de kaart
       var map = mapRenderer.initMap(mapContainer, mapOptions);
       
-      // Controleer of de kaart goed is gerenderd en pas de grootte aan
+      // Gebruik event-based resizing indien beschikbaar, anders fallback naar timeout
       if (map) {
-        setTimeout(function() {
-          mapRenderer.resizeMap();
-        }, 250);
+        if (map.on && typeof map.on === 'function') {
+          // Leaflet ondersteunt events
+          map.on('load', function() {
+            mapRenderer.resizeMap();
+          });
+        } else {
+          // Fallback naar setTimeout
+          setTimeout(function() {
+            mapRenderer.resizeMap();
+          }, 250);
+        }
       }
       
       // Pas thema toe op basis van Qlik Sense thema
@@ -259,6 +302,9 @@ define([
      * @param {Object} layout - Layout object met configuratie
      */
     configureAnimationSettings: function(layout) {
+      // Controleer of layout geldig is om fouten te voorkomen
+      if (!layout) return;
+      
       // Configureer animatie instellingen op basis van layout
       trainVisualizer.configureAnimation({
         enabled: layout.animateUpdates !== undefined ? layout.animateUpdates : true,
@@ -287,8 +333,10 @@ define([
       // Filter de gegevens op basis van geselecteerde treinnummers indien nodig
       var filteredTrainData = trainData;
       if (selectedTrainIds && selectedTrainIds.length > 0 && layout && layout.filterBySelection) {
+        // Gebruik een Set voor efficiëntere lookups
+        var selectedTrainSet = new Set(selectedTrainIds);
         filteredTrainData = trainData.filter(function(train) {
-          return selectedTrainIds.indexOf(train.number) !== -1;
+          return selectedTrainSet.has(train.number);
         });
       }
       
@@ -313,7 +361,7 @@ define([
       var trainNumbers = [];
       
       // Controleer of we een hypercube hebben met data
-      if (layout.qHyperCube && 
+      if (layout && layout.qHyperCube && 
           layout.qHyperCube.qDataPages && 
           layout.qHyperCube.qDataPages.length > 0 &&
           layout.qHyperCube.qDataPages[0].qMatrix) {
@@ -341,21 +389,11 @@ define([
       var self = this;
       var app = qlik.currApp();
       
-      // Haal het veld op uit de layout
-      var field = app.field('Train Number'); // Standaard veldnaam aanname
+      // Verkrijg de naam van het veld uit de configuratie
+      var fieldName = self.getTrainNumberFieldName();
+      if (!fieldName) return;
       
-      // Als we een specifiek veld hebben geconfigureerd, gebruik dat
-      if (self.$scope && 
-          self.$scope.layout && 
-          self.$scope.layout.qHyperCube && 
-          self.$scope.layout.qHyperCube.qDimensionInfo &&
-          self.$scope.layout.qHyperCube.qDimensionInfo.length > 0) {
-        
-        var fieldName = self.$scope.layout.qHyperCube.qDimensionInfo[0].qFallbackTitle;
-        if (fieldName) {
-          field = app.field(fieldName);
-        }
-      }
+      var field = app.field(fieldName);
       
       // Selecteer de waarde in het veld
       if (field) {
@@ -369,6 +407,37 @@ define([
           qText: trainId
         }], true, true);
       }
+    },
+    
+    /**
+     * Haalt de veldnaam op voor treinnummers uit de configuratie
+     * @returns {string} Veldnaam voor treinnummers
+     */
+    getTrainNumberFieldName: function() {
+      var self = this;
+      
+      // Controleer of we een specifiek veld hebben geconfigureerd in propertyPanel
+      if (self.$scope && 
+          self.$scope.layout && 
+          self.$scope.layout.trainNumberFieldName) {
+        return self.$scope.layout.trainNumberFieldName;
+      }
+      
+      // Fallback naar de eerste dimensie in de hypercube
+      if (self.$scope && 
+          self.$scope.layout && 
+          self.$scope.layout.qHyperCube && 
+          self.$scope.layout.qHyperCube.qDimensionInfo &&
+          self.$scope.layout.qHyperCube.qDimensionInfo.length > 0) {
+        
+        var fieldName = self.$scope.layout.qHyperCube.qDimensionInfo[0].qFallbackTitle;
+        if (fieldName) {
+          return fieldName;
+        }
+      }
+      
+      // Default veldnaam als laatste resort
+      return 'Train Number';
     },
     
     /**
@@ -390,22 +459,48 @@ define([
       // Toon laden indicator
       $element.find('.train-data-section').html('<p>Treingegevens worden opgehaald...</p>');
       
+      // Controleer of $scope is geïnitialiseerd
+      if (!self.$scope || !self.$scope.layout) {
+        console.error('$scope of layout is niet beschikbaar');
+        return;
+      }
+      
       // Gebruik filterBySelection instelling om te bepalen of we filteren
-      var useTrainFilter = self.$scope.layout.filterBySelection && trainNumbers.length > 0;
+      var useTrainFilter = self.$scope.layout.filterBySelection && trainNumbers && trainNumbers.length > 0;
       var trainFilter = useTrainFilter ? trainNumbers : null;
+      
+      // Haal status op om oneindige lus te voorkomen
+      var isAutoRefreshing = self.$scope.layout.autoRefresh;
       
       // Haal de traingegevens op
       trainDataService.getTrainLocations(trainFilter)
         .then(function(data) {
+          // Markeer dat we niet in een auto-refresh zitten
+          var wasAutoRefreshing = isAutoRefreshing;
+          
           // Herrender de extensie om de nieuwe gegevens te tonen
+          // Voorkom oneindige lus door autoRefresh tijdelijk uit te schakelen
+          if (wasAutoRefreshing) {
+            self.$scope.layout.autoRefresh = false;
+          }
+          
           self.paint($element, self.$scope.layout);
+          
+          // Herstel de autoRefresh status
+          if (wasAutoRefreshing) {
+            self.$scope.layout.autoRefresh = true;
+            self.$scope.startAutoRefresh();
+          }
         })
         .catch(function(error) {
+          // Verwerk fouten op een veilige manier
+          var errorMsg = error && error.message ? error.message : 'Onbekende fout';
+          
           // Toon foutmelding
           $element.find('.train-data-section').html(
             '<div class="error-message">' +
             '<p>Er is een fout opgetreden bij het ophalen van de treingegevens:</p>' +
-            '<p>' + error.message + '</p>' +
+            '<p>' + escapeHtml(errorMsg) + '</p>' +
             '</div>'
           );
         });
@@ -415,6 +510,23 @@ define([
       // Referentie naar de scope voor hergebruik
       this.$scope = $scope;
       var self = this;
+      
+      // Helper functie om op een veilige manier object properties te checken
+      $scope.safeGetProperty = function(obj, path, defaultValue) {
+        if (!obj) return defaultValue;
+        
+        var parts = path.split('.');
+        var current = obj;
+        
+        for (var i = 0; i < parts.length; i++) {
+          if (current === undefined || current === null) {
+            return defaultValue;
+          }
+          current = current[parts[i]];
+        }
+        
+        return current !== undefined ? current : defaultValue;
+      };
       
       // Bepaal verversingsinterval op basis van instelling
       $scope.getRefreshInterval = function() {
@@ -440,19 +552,25 @@ define([
        */
       $scope.getTrainData = function(trainNumbers) {
         // Bepaal of we moeten filteren op treinnummers
-        var useTrainFilter = $scope.layout.filterBySelection && trainNumbers && trainNumbers.length > 0;
+        var useTrainFilter = $scope.layout && $scope.layout.filterBySelection && 
+                            trainNumbers && trainNumbers.length > 0;
         var trainFilter = useTrainFilter ? trainNumbers : null;
         
         trainDataService.getTrainLocations(trainFilter)
           .then(function(data) {
-            console.log('Treingegevens opgehaald:', data);
+            console.log('Treingegevens opgehaald:', data.length ? data.length + ' treinen' : 'geen data');
             
-            // Update de visualisatie met de nieuwe data
-            var selectedTrainIds = $element.scope().object.getSelectedTrainNumbers($scope.layout);
-            $element.scope().object.updateTrainVisualization(data, selectedTrainIds, $scope.layout);
+            // Gebruik consistente methode voor scope toegang
+            var obj = $scope.$parent.object;
+            if (obj) {
+              var currentTrainNumbers = obj.getSelectedTrainNumbers($scope.layout);
+              obj.updateTrainVisualization(data, currentTrainNumbers, $scope.layout);
+            } else {
+              console.error('Object niet gevonden in scope');
+            }
           })
           .catch(function(error) {
-            console.error('Fout bij ophalen treingegevens:', error);
+            console.error('Fout bij ophalen treingegevens:', error && error.message ? error.message : 'Onbekende fout');
           });
       };
       
@@ -468,29 +586,36 @@ define([
         
         // Start verversing met callback
         trainDataService.startAutoRefresh(function(data) {
-          // Update train markers bij nieuwe data
-          var selectedTrainIds = $element.scope().object.getSelectedTrainNumbers($scope.layout);
-          $element.scope().object.updateTrainVisualization(data, selectedTrainIds, $scope.layout);
+          // Check of de layout en object nog bestaan
+          if (!$scope.layout) return;
           
-          // Update het tijdstip van laatste update in de UI
+          var obj = $scope.$parent.object;
+          if (!obj) return;
+          
+          // Update train markers bij nieuwe data
+          var currentTrainNumbers = obj.getSelectedTrainNumbers($scope.layout);
+          obj.updateTrainVisualization(data, currentTrainNumbers, $scope.layout);
+          
+          // Update het tijdstip van laatste update in de UI via de scope
           var lastUpdate = trainDataService.getLastUpdateTime();
           if (lastUpdate) {
-            var $lastUpdateEl = $element.find('.last-update');
-            if ($lastUpdateEl.length) {
-              $lastUpdateEl.text('Laatst bijgewerkt: ' + lastUpdate.toLocaleTimeString());
-            } else {
-              // Voeg toe aan de info sectie als het element nog niet bestaat
-              $element.find('.train-info-section').append(
-                '<p class="last-update">Laatst bijgewerkt: ' + lastUpdate.toLocaleTimeString() + '</p>'
-              );
-            }
+            $scope.lastUpdateTime = lastUpdate.toLocaleTimeString();
+            
+            // Update binnen Angular digest cycle
+            $scope.$applyAsync(function() {
+              var $lastUpdateEl = $element.find('.last-update');
+              if ($lastUpdateEl.length) {
+                $lastUpdateEl.text('Laatst bijgewerkt: ' + $scope.lastUpdateTime);
+              }
+            });
           }
           
           // Bij elke update de extensie opnieuw renderen als dat nodig is
           // We gebruiken applyAsync om beter te presteren met veel updates
           $scope.$applyAsync(function() {
-            if ($scope.layout.autoRefresh) {
-              $element.scope().object.paint($element, $scope.layout);
+            if ($scope.layout && $scope.layout.autoRefresh) {
+              // Gebruik de parent scope object in plaats van element.scope()
+              obj.paint($element, $scope.layout);
             }
           });
         }, refreshInterval);
@@ -550,39 +675,45 @@ define([
       $scope.$watchGroup(['layout.animateUpdates', 'layout.animationDuration'], function() {
         // Update animatie instellingen
         if ($scope.layout) {
-          // Gebruik het object zelf (via $element.scope().object) om de functie correct aan te roepen
-          $element.scope().object.configureAnimationSettings($scope.layout);
+          // Gebruik het object zelf via parent scope
+          $scope.$parent.object.configureAnimationSettings($scope.layout);
         }
       });
       
       // Luisteren naar wijzigingen in selecties
-      if ($scope.layout && $scope.layout.refreshOnSelection) {
+      if ($scope.layout && $scope.layout.refreshOnSelection && $scope.backendApi) {
         $scope.backendApi.getProperties().then(function(reply) {
-          var dimensions = reply.qHyperCubeDef.qDimensions || [];
+          var dimensions = $scope.safeGetProperty(reply, 'qHyperCubeDef.qDimensions', []);
           if (dimensions.length > 0) {
-            var fieldName = dimensions[0].qDef.qFieldDefs[0];
+            var fieldName = $scope.safeGetProperty(dimensions[0], 'qDef.qFieldDefs[0]', '');
             fieldName = fieldName.replace(/[\[\]]/g, ''); // Verwijder eventuele haakjes
+            
+            if (!fieldName) return;
             
             // Monitor selecties voor dit veld
             var app = qlik.currApp();
             var field = app.field(fieldName);
             
-            if (field) {
+            if (field && field.OnData && typeof field.OnData.bind === 'function') {
               field.OnData.bind(function() {
+                // Gebruik de parent scope object
+                var obj = $scope.$parent.object;
+                if (!obj) return;
+                
                 // Ververs gegevens als er een selectie wijziging is
-                var trainNumbers = $element.scope().object.getSelectedTrainNumbers($scope.layout);
+                var currentTrainNumbers = obj.getSelectedTrainNumbers($scope.layout);
                 var trainData = trainDataService.getCachedData();
                 
                 // Update markers op basis van nieuwe selecties
                 if (trainData) {
-                  $element.scope().object.updateTrainVisualization(trainData, trainNumbers, $scope.layout);
+                  obj.updateTrainVisualization(trainData, currentTrainNumbers, $scope.layout);
                 }
                 
                 if ($scope.layout.refreshOnSelection) {
-                  $element.scope().object.refreshTrainData(trainNumbers, $element);
+                  obj.refreshTrainData(currentTrainNumbers, $element);
                 } else {
                   // Alleen UI verversen zonder nieuwe data op te halen
-                  $element.scope().object.paint($element, $scope.layout);
+                  obj.paint($element, $scope.layout);
                 }
               });
             }
@@ -590,20 +721,28 @@ define([
         });
       }
       
-      // Registreer resize handler
-      $(window).on('resize', $scope.handleResize);
+      // Registreer resize handler - Gebruik namespaced events
+      $(window).on('resize.trainExtension', $scope.handleResize);
       
-      // Registreer visibility change handler voor browser tab wisselen
-      $(document).on('visibilitychange', $scope.handleVisibilityChange);
+      // Registreer visibility change handler voor browser tab wisselen - Gebruik namespaced events
+      $(document).on('visibilitychange.trainExtension', $scope.handleVisibilityChange);
 
       // Opruimen bij verwijderen van de extensie
       $scope.$on('$destroy', function() {
         // Stop automatische verversing
         $scope.stopAutoRefresh();
         
-        // Verwijder event handlers
-        $(window).off('resize', $scope.handleResize);
-        $(document).off('visibilitychange', $scope.handleVisibilityChange);
+        // Verwijder event handlers met namespaced selectors
+        $(window).off('resize.trainExtension');
+        $(document).off('visibilitychange.trainExtension');
+        
+        // Verwijder eventuele element event handlers
+        if ($element) {
+          $element.find('#refreshTrainData').off('click');
+          $element.find('#autoRefreshToggle').off('click');
+          $element.find('#clearTrainSelections').off('click');
+          $element.find('table tbody tr').off('click');
+        }
         
         // Ruim kaart op
         mapRenderer.destroyMap();
