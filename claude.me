@@ -14,6 +14,10 @@ LiveTrainExtension/
 ├── propertyPanel.js              # Configuratie van het eigenschappen paneel
 ├── QLIK_CLOUD_COMPATIBILITY.md   # Documentatie voor Qlik Cloud compatibiliteit
 ├── EXTERNAL_LIBRARIES.md         # Instructies voor bundelen van bibliotheken
+├── CHANGELOG.md                  # Wijzigingsgeschiedenis
+├── package.json                  # Project metadata en scripts
+├── build.js                      # Build script voor distributie
+├── .gitignore                    # Lijst van bestanden uitgesloten van versiecontrole
 ├── api/
 │   ├── trainDataService.js       # Service voor het ophalen van treingegevens
 │   ├── apiConfig.js              # API configuratie en endpoints
@@ -362,6 +366,47 @@ LiveTrainExtension/
 * **Functionaliteit**: Instructies voor het bundelen van externe bibliotheken voor Qlik Cloud
 * **Belangrijkste functies**: N.v.t. (Markdown documentatie bestand)
 
+### 3.15 CHANGELOG.md
+* **Status**: Voltooid - Nieuw toegevoegd
+* **Bestandsnaam**: CHANGELOG.md
+* **Functionaliteit**: Wijzigingsgeschiedenis en versie-informatie
+* **Belangrijkste functies**: N.v.t. (Markdown documentatie bestand)
+
+### 3.16 package.json
+* **Status**: Voltooid - Nieuw toegevoegd
+* **Bestandsnaam**: package.json
+* **Functionaliteit**: Project metadata, dependencies en script configuratie
+* **Belangrijkste functies**: N.v.t. (JSON configuratiebestand)
+
+### 3.17 build.js
+* **Status**: Voltooid - Nieuw toegevoegd
+* **Bestandsnaam**: build.js
+* **Functionaliteit**: Geautomatiseerd build script voor het genereren van distributiepakketten
+* **Belangrijkste functies**:
+  * `updateVersionInfo()`: 
+    * Parameters: Geen
+    * Return waarde: Promise die resolvet wanneer versie-informatie is bijgewerkt
+    * Afhankelijkheden: fs-extra
+  * `createBuildStructure()`: 
+    * Parameters: Geen
+    * Return waarde: Promise die resolvet met het build directory path
+    * Afhankelijkheden: fs-extra, path
+  * `createZipArchive(sourceDir)`: 
+    * Parameters: 
+      * sourceDir (String): Directory met de te archiveren bestanden
+    * Return waarde: Promise die resolvet wanneer het archief is aangemaakt
+    * Afhankelijkheden: fs-extra, archiver
+  * `build()`: 
+    * Parameters: Geen
+    * Return waarde: Promise die resolvet wanneer het build proces is voltooid
+    * Afhankelijkheden: Alle bovenstaande functies
+
+### 3.18 .gitignore
+* **Status**: Voltooid - Nieuw toegevoegd
+* **Bestandsnaam**: .gitignore
+* **Functionaliteit**: Definieert bestanden die uitgesloten moeten worden van versiecontrole
+* **Belangrijkste functies**: N.v.t. (Configuratiebestand)
+
 ## 4. Status
 Voltooide modules:
 - LiveTrainExtension.js (geoptimaliseerd met verbeterde event handling, XSS-beveiliging, efficiëntere filtering, betere foutafhandeling en Qlik Cloud compatibiliteit)
@@ -380,6 +425,9 @@ Voltooide modules:
 - .gitignore (toegevoegd om apiKey.js uit te sluiten van versiecontrole)
 - QLIK_CLOUD_COMPATIBILITY.md (nieuw: documentatie over Qlik Cloud compatibiliteit)
 - EXTERNAL_LIBRARIES.md (nieuw: instructies voor het bundelen van externe bibliotheken)
+- CHANGELOG.md (nieuw: wijzigingsgeschiedenis en versie-informatie)
+- package.json (nieuw: project metadata, dependencies en script configuratie)
+- build.js (nieuw: geautomatiseerd build script voor distributie)
 
 Alle modules zijn nu volledig geïmplementeerd, geïntegreerd en geoptimaliseerd. De belangrijke bugs en functionele fouten in LiveTrainExtension.js zijn opgelost, waaronder:
 - Memory leaks door meervoudige event handlers
@@ -400,6 +448,8 @@ De extensie is nu ook volledig compatibel gemaakt met Qlik Cloud door:
 
 De extensie beschikt nu over alle gewenste functionaliteit, inclusief real-time updates, vloeiende animaties en gebruikersvriendelijke configuratiemogelijkheden, en is robuuster, veiliger en efficiënter gemaakt voor productiegebruik, zowel in Qlik Sense Desktop als Qlik Cloud.
 
+Bovendien is een volledig geautomatiseerd build systeem geïmplementeerd waarmee gemakkelijk productieklare distributiepakketten kunnen worden gegenereerd, met correcte versie-informatie en zonder gevoelige bestanden.
+
 ## 5. Volgende stappen
 
 ### Must-haves:
@@ -416,8 +466,9 @@ De extensie beschikt nu over alle gewenste functionaliteit, inclusief real-time 
 11. ✅ Optimalisatie van LiveTrainExtension.js met functieonele verbeteringen (memory leaks, XSS-beveiliging, etc.)
 12. ✅ Implementatie van aparte apiKey.js file voor veilig API key beheer
 13. ✅ Compatibiliteit met Qlik Cloud - geoptimaliseerd voor Qlik Cloud met verbeterde CORS-handling, DOM-manipulatie en documentatie
+14. ✅ Extensie-bundel voorbereiden voor productie-releases - build script en versie management implementeren
 
-Alle must-have functionaliteiten zijn nu geïmplementeerd, getest en geoptimaliseerd. De extensie is volledig functioneel, veilig en efficiënt voor gebruik in productieomgevingen, inclusief Qlik Cloud.
+Alle must-have functionaliteiten zijn nu geïmplementeerd, getest en geoptimaliseerd. De extensie is volledig functioneel, veilig en efficiënt voor gebruik in productieomgevingen, inclusief Qlik Cloud. Daarnaast is een geautomatiseerd build proces opgezet voor het genereren van productieklare distributiepakketten.
 
 ### Nice-to-haves:
 1. ✅ Aanpasbare verversingsfrequentie van treingegevens via het eigenschappen paneel (geïmplementeerd)
