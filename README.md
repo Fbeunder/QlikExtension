@@ -44,15 +44,52 @@ Deze extensie maakt het mogelijk om real-time treinposities te visualiseren in Q
    - Windows (Desktop): `C:\\Users\\[USERNAME]\\Documents\\Qlik\\Sense\\Extensions\\`
    - Qlik Sense Server: `C:\\Program Files\\Qlik\\Sense\\Extensions\\`
 
+## API Key Configuratie
+
+De extensie gebruikt de NS API en vereist daarom een API key. Deze wordt nu veilig beheerd via een apart configuratiebestand:
+
+1. Ga naar de map `LiveTrainExtension/api/`
+2. Kopieer het bestand `apiKey.template.js` naar een nieuw bestand genaamd `apiKey.js`
+3. Open `apiKey.js` en voer uw NS API key in bij het veld `apiKey`
+4. Sla het bestand op
+
+**Voordelen van deze aanpak:**
+- Veiligere opslag van API keys buiten de hoofdcode
+- Eenvoudig te updaten zonder de hoofdcode aan te passen
+- Voorkomt per ongeluk delen van API keys via versiebeheersystemen (apiKey.js is opgenomen in .gitignore)
+- Ondersteunt verschillende keys voor ontwikkelings- en productieomgevingen
+
+**Voorbeeld:**
+```javascript
+var apiKeyConfig = {
+    apiKey: 'uw-ns-api-sleutel-hier',
+    
+    dev: {
+        apiKey: 'ontwikkelomgeving-sleutel'
+    },
+    
+    prod: {
+        apiKey: 'productieomgeving-sleutel'
+    },
+    
+    getApiKey: function(environment) {
+        if (environment && this[environment] && this[environment].apiKey) {
+            return this[environment].apiKey;
+        }
+        return this.apiKey;
+    }
+};
+```
+
 ## Configuratie
 
 De extensie configuratie is opgedeeld in vier hoofdonderdelen:
 
 ### 1. API Configuratie
 
-De NS API vereist een geldige API key. Configureer deze in het eigenschappen paneel:
+De NS API vereist een geldige API key. Configureer deze in het eigenschappen paneel of in het aparte apiKey.js bestand (aanbevolen):
 
-- **API Key**: Voer uw NS API key in
+- **API Key**: Voer uw NS API key in (aanbevolen om dit in apiKey.js te doen)
 - **CORS Proxy**: Schakel deze optie in als u CORS-problemen ondervindt
 - **CORS Proxy URL**: URL naar een CORS proxy (indien nodig)
 
@@ -145,7 +182,9 @@ LiveTrainExtension/
 ├── propertyPanel.js              # Eigenschappen paneel
 ├── api/
 │   ├── trainDataService.js       # Service voor het ophalen van treingegevens
-│   └── apiConfig.js              # API configuratie en endpoints
+│   ├── apiConfig.js              # API configuratie en endpoints
+│   ├── apiKey.js                 # Persoonlijke API Key (uitgesloten van versiecontrole)
+│   └── apiKey.template.js        # Template voor het maken van apiKey.js
 ├── ui/
 │   ├── mapRenderer.js            # Voor het weergeven van de kaart
 │   └── trainVisualizer.js        # Voor het visualiseren van treinen
@@ -166,9 +205,10 @@ LiveTrainExtension/
 ### Ontwikkeling en aanpassingen
 
 1. Clone de repository
-2. Wijzig bestanden naar wens
-3. Test de extensie in Qlik Sense Desktop
-4. Verpak (zip) voor distributie
+2. Maak een apiKey.js bestand op basis van het template met uw eigen API sleutel
+3. Wijzig bestanden naar wens
+4. Test de extensie in Qlik Sense Desktop
+5. Verpak (zip) voor distributie (apiKey.js wordt automatisch uitgesloten via .gitignore)
 
 ### Debuggen
 
