@@ -1,6 +1,7 @@
 /*
  * LiveTrainExtension - Een Qlik Sense extensie voor het live volgen van treinen
  * Service voor het ophalen van treingegevens van externe API's
+ * Aangepast voor betere Qlik Cloud compatibiliteit
  */
 define(['jquery', './apiConfig'], function($, apiConfig) {
   'use strict';
@@ -19,6 +20,32 @@ define(['jquery', './apiConfig'], function($, apiConfig) {
     var refreshCallbacks = [];
     var lastApiValidationCheck = null;
     var API_VALIDATION_INTERVAL = 60000; // 1 minuut
+    var usePolyfillFetch = false; // Flag voor het gebruiken van Ajax als polyfill voor fetch
+    var isQlikCloud = false; // Detecteer of we in Qlik Cloud draaien
+    
+    /**
+     * Detecteer of we in Qlik Cloud omgeving draaien
+     * @returns {boolean} True als we in Qlik Cloud draaien
+     */
+    function detectQlikCloudEnvironment() {
+      try {
+        // Probeer te detecteren of we in Qlik Cloud draaien
+        if (window && window.location && window.location.hostname) {
+          var hostname = window.location.hostname;
+          // Check of we op een Qlik Cloud domein zijn
+          if (hostname.indexOf('qlikcloud.com') !== -1 || 
+              hostname.indexOf('eu.qlikcloud.com') !== -1 || 
+              hostname.indexOf('us.qlikcloud.com') !== -1 ||
+              hostname.indexOf('ap.qlikcloud.com') !== -1) {
+            return true;
+          }
+        }
+        return false;
+      } catch (e) {
+        console.warn('Fout bij detecteren Qlik Cloud omgeving:', e);
+        return false;
+      }
+    }
     
     /**
      * Maakt de request headers aan voor API verzoeken
@@ -33,6 +60,11 @@ define(['jquery', './apiConfig'], function($, apiConfig) {
       // Voeg autorisatie toe als er een API key is geconfigureerd
       if (apiConfig.auth && apiConfig.auth.key) {
         headers[apiConfig.auth.headerName] = apiConfig.auth.key;
+      }
+      
+      // Voeg CORS headers toe als we in Qlik Cloud draaien
+      if (isQlikCloud) {
+        headers['X-Requested-With'] = 'XMLHttpRequest';
       }
       
       return headers;
@@ -64,7 +96,7 @@ define(['jquery', './apiConfig'], function($, apiConfig) {
     }
     
     /**
-     * Voert de API call uit om treinlocaties op te halen
+     * Voert de API call uit om treinlocaties op te halen met verbeterde CORS handling
      * @param {Array} trainNumbers - Optionele array met treinnummers om te filteren
      * @returns {Promise} Promise die resolvet naar treinlocatie data
      */
@@ -83,28 +115,121 @@ define(['jquery', './apiConfig'], function($, apiConfig) {
       // Voeg train_number filter toe als er treinnummers zijn opgegeven
       if (trainNumbers && trainNumbers.length > 0 && Array.isArray(trainNumbers)) {
         // Als de API een parameter voor treinnummer filter ondersteunt, voeg deze toe
-        // Voor de NS API is dit niet standaard, maar we bereiden ons voor op toekomstige mogelijkheden
         if (trainNumbers.length <= 10) { // Beperk aantal voor URL-lengte
           params.trainNumbers = trainNumbers.join(',');
         }
       }
       
-      // Maak ajax-opties aan
+      // Bepaal of we fetch of ajax gebruiken
+      if (window.fetch && !usePolyfillFetch) {
+        // Modern: Gebruik fetch API
+        return fetchWithFetch(url, params);
+      } else {
+        // Legacy: Gebruik jQuery AJAX
+        return fetchWithAjax(url, params);
+      }
+    }
+    
+    /**
+     * Fetch implementatie met moderne fetch API
+     * @param {string} url - De API URL
+     * @param {Object} params - Query parameters
+     * @returns {Promise} Promise met respons data
+     */
+    function fetchWithFetch(url, params) {
+      // Converteer params naar query string
+      var queryString = Object.keys(params)
+        .map(function(key) {
+          return encodeURIComponent(key) + '=' + encodeURIComponent(params[key]);
+        })
+        .join('&');
+      
+      // Voeg query string toe aan URL
+      var fullUrl = url + (url.indexOf('?') === -1 ? '?' : '&') + queryString;
+      
+      // Headers voor het verzoek
+      var headers = getRequestHeaders();
+      
+      // Fetch opties
+      var fetchOptions = {
+        method: 'GET',
+        headers: headers,
+        mode: isQlikCloud ? 'cors' : 'same-origin',
+        cache: 'no-cache',
+        credentials: 'same-origin',
+        redirect: 'follow',
+        referrerPolicy: 'no-referrer-when-downgrade',
+        timeout: 20000
+      };
+      
+      // Voer de fetch uit met retry mechanisme
+      return executeWithRetry(function() {
+        return new Promise(function(resolve, reject) {
+          // Gebruik AbortController voor timeout (indien ondersteund)
+          var controller = window.AbortController ? new AbortController() : null;
+          var timeoutId = null;
+          
+          if (controller) {
+            fetchOptions.signal = controller.signal;
+            timeoutId = setTimeout(function() {
+              controller.abort();
+            }, 20000); // 20 seconden timeout
+          }
+          
+          fetch(fullUrl, fetchOptions)
+            .then(function(response) {
+              if (timeoutId) clearTimeout(timeoutId);
+              
+              if (!response.ok) {
+                throw new Error('Netwerk respons was niet ok: ' + response.status + ' ' + response.statusText);
+              }
+              return response.json();
+            })
+            .then(resolve)
+            .catch(reject);
+        });
+      }, 2).then(processApiResponse(trainNumbers)).catch(handleApiError);
+    }
+    
+    /**
+     * Fetch implementatie met jQuery ajax
+     * @param {string} url - De API URL
+     * @param {Object} params - Query parameters
+     * @returns {Promise} Promise met respons data
+     */
+    function fetchWithAjax(url, params) {
+      // Verbeterde ajax opties voor Qlik Cloud
       var ajaxOptions = {
         url: url,
         type: 'GET',
         data: params,
         headers: getRequestHeaders(),
-        timeout: 20000, // 20 seconden timeout voor de NS API
-        xhrFields: {
-          withCredentials: false
-        }
+        timeout: 20000, // 20 seconden timeout
+        dataType: 'json',
+        cache: false
       };
+      
+      // Extra opties voor CORS in Qlik Cloud
+      if (isQlikCloud) {
+        ajaxOptions.xhrFields = {
+          withCredentials: false
+        };
+        ajaxOptions.crossDomain = true;
+      }
       
       // Voer de AJAX request uit met retry mechanisme
       return executeWithRetry(function() {
         return $.ajax(ajaxOptions);
-      }, 2).then(function(response) {
+      }, 2).then(processApiResponse(trainNumbers)).catch(handleApiError);
+    }
+    
+    /**
+     * Processor functie voor API respons
+     * @param {Array} trainNumbers - Array met treinnummers om te filteren
+     * @returns {Function} Functie die de respons verwerkt
+     */
+    function processApiResponse(trainNumbers) {
+      return function(response) {
         // Reset error teller bij succesvolle call
         errorCount = 0;
         
@@ -119,29 +244,41 @@ define(['jquery', './apiConfig'], function($, apiConfig) {
         }
         
         return response;
-      }).catch(function(error) {
-        // Houd bij hoeveel errors er zijn opgetreden
-        errorCount++;
-        console.error('Fout bij ophalen treingegevens:', error);
-        
-        // Stop automatische verversing bij teveel errors
-        if (errorCount >= MAX_ERROR_COUNT) {
-          stopAutoRefresh();
-          console.error('Automatische verversing gestopt na ' + MAX_ERROR_COUNT + ' opeenvolgende fouten');
-        }
-        
-        // Geef fout door aan aanroeper met verbeterde foutinformatie
-        var errorMessage = 'Er is een fout opgetreden bij het ophalen van treingegevens';
-        
-        // Poging om specifiekere foutmelding te extraheren
-        if (error.status && error.statusText) {
-          errorMessage += ': ' + error.status + ' ' + error.statusText;
-        } else if (error.message) {
-          errorMessage += ': ' + error.message;
-        }
-        
-        throw new Error(errorMessage);
-      });
+      };
+    }
+    
+    /**
+     * Error handler voor API calls
+     * @param {Error} error - De opgetreden fout
+     * @throws {Error} Gooit een fout met informatieve boodschap
+     */
+    function handleApiError(error) {
+      // Houd bij hoeveel errors er zijn opgetreden
+      errorCount++;
+      console.error('Fout bij ophalen treingegevens:', error);
+      
+      // Stop automatische verversing bij teveel errors
+      if (errorCount >= MAX_ERROR_COUNT) {
+        stopAutoRefresh();
+        console.error('Automatische verversing gestopt na ' + MAX_ERROR_COUNT + ' opeenvolgende fouten');
+      }
+      
+      // Geef fout door aan aanroeper met verbeterde foutinformatie
+      var errorMessage = 'Er is een fout opgetreden bij het ophalen van treingegevens';
+      
+      // Poging om specifiekere foutmelding te extraheren
+      if (error.status && error.statusText) {
+        errorMessage += ': ' + error.status + ' ' + error.statusText;
+      } else if (error.message) {
+        errorMessage += ': ' + error.message;
+      }
+      
+      // Als we in Qlik Cloud zijn, voeg extra informatie toe
+      if (isQlikCloud && error.message && error.message.indexOf('CORS') !== -1) {
+        errorMessage += ' (Mogelijk een CORS probleem in Qlik Cloud. Controleer de API configuratie en CORS instellingen.)';
+      }
+      
+      throw new Error(errorMessage);
     }
     
     /**
@@ -171,6 +308,12 @@ define(['jquery', './apiConfig'], function($, apiConfig) {
           return new Promise(function(resolve) {
             setTimeout(resolve, retryDelay);
           }).then(function() {
+            // Als we in Qlik Cloud zijn en de eerste poging met fetch faalde, probeer ajax
+            if (isQlikCloud && currentRetry === 1 && window.fetch && !usePolyfillFetch) {
+              console.warn('Schakel over naar Ajax als fallback voor fetch in Qlik Cloud');
+              usePolyfillFetch = true;
+            }
+            
             // Probeer opnieuw
             return executeWithRetry(fn, maxRetries, retryDelay, currentRetry);
           });
@@ -329,13 +472,13 @@ define(['jquery', './apiConfig'], function($, apiConfig) {
       
       try {
         // Extraheer de minuten uit de ISO8601 duration string
-        var minutesMatch = delayString.match(/PT(\\d+)M/);
+        var minutesMatch = delayString.match(/PT(\d+)M/);
         if (minutesMatch && minutesMatch[1]) {
           return parseInt(minutesMatch[1], 10);
         }
         
         // Probeer ook uren te extraheren indien aanwezig (bijv. PT1H30M)
-        var hoursMatch = delayString.match(/PT(\\d+)H/);
+        var hoursMatch = delayString.match(/PT(\d+)H/);
         if (hoursMatch && hoursMatch[1]) {
           var hours = parseInt(hoursMatch[1], 10);
           // Converteer uren naar minuten en voeg eventuele minuten toe
@@ -437,6 +580,12 @@ define(['jquery', './apiConfig'], function($, apiConfig) {
         Math.min(apiConfig.constants.REFRESH_INTERVALS.MAXIMUM, interval)
       );
       
+      // In Qlik Cloud, verlaag de verversingsfrequentie iets om de belasting te beperken
+      if (isQlikCloud && refreshInterval < 10000) {
+        console.log('Verhoog verversingsinterval naar minimum 10s voor Qlik Cloud');
+        refreshInterval = 10000; // Minimum 10 seconden in Qlik Cloud
+      }
+      
       // Start nieuwe timer voor automatische updates
       refreshTimer = setInterval(function performRefresh() {
         // Voorkom overlappende verversingen
@@ -497,6 +646,12 @@ define(['jquery', './apiConfig'], function($, apiConfig) {
       console.log('Trein data service opgeschoond');
     }
     
+    // Detecteer Qlik Cloud omgeving bij initialisatie
+    isQlikCloud = detectQlikCloudEnvironment();
+    if (isQlikCloud) {
+      console.log('Qlik Cloud omgeving gedetecteerd. Qlik Cloud-specifieke instellingen worden toegepast.');
+    }
+    
     // Returneer publieke API
     return {
       getTrainLocations: getTrainLocations,
@@ -548,6 +703,14 @@ define(['jquery', './apiConfig'], function($, apiConfig) {
           return true;
         }
         return false;
+      },
+      
+      /**
+       * Geeft aan of de service in Qlik Cloud draait
+       * @returns {boolean} true als in Qlik Cloud, anders false
+       */
+      isQlikCloudEnvironment: function() {
+        return isQlikCloud;
       }
     };
   })();
