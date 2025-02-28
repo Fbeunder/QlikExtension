@@ -969,8 +969,20 @@ define([
       $scope.$watchGroup(['layout.animateUpdates', 'layout.animationDuration', 'layout.animationEasing', 'layout.animationSmoothness'], function() {
         // Update animatie instellingen
         if ($scope.layout) {
-          // Gebruik het object zelf via parent scope
-          $scope.$parent.object.configureAnimationSettings($scope.layout);
+          // Gebruik de extensie instance direct in plaats van via parent scope
+          // FIX: Vervang $scope.$parent.object door this.$parent om TypeError op te lossen
+          var extensionInstance = $element.data('object');
+          if (extensionInstance && typeof extensionInstance.configureAnimationSettings === 'function') {
+            extensionInstance.configureAnimationSettings($scope.layout);
+          } else {
+            // Alternatieve oplossing als data('object') niet beschikbaar is
+            trainVisualizer.configureAnimation({
+              enabled: $scope.layout.animateUpdates !== undefined ? $scope.layout.animateUpdates : true,
+              duration: $scope.layout.animationDuration || 1000,
+              easing: $scope.layout.animationEasing || 'linear',
+              smoothness: $scope.layout.animationSmoothness || 1
+            });
+          }
         }
       });
       
