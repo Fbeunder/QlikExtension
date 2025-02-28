@@ -1,0 +1,18 @@
+{
+  "name": "Live Train Extension",
+  "description": "An extension to visualize real-time train locations on a map",
+  "type": "visualization",
+  "version": "1.0.0",
+  "author": "Fbeunder",
+  "icon": "map",
+  "preview": "lib/images/extension-preview.png",
+  "keywords": "qlik-sense, visualization, map, trains, realtime",
+  "dependencies": {
+    "qlik-sense": ">=3.0.x"
+  },
+  "bundle": {
+    "id": "live-train-extension-bundle",
+    "name": "Live Train Extension Bundle",
+    "description": "This extension visualizes real-time train locations"
+  }
+}
