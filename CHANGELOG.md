@@ -1,42 +1,40 @@
-# Changelog - Live Train Extension
+# Changelog
 
-## Versie 1.1.0 - 28 februari 2025
+All notable changes to the LiveTrainExtension will be documented in this file.
 
-### Toegevoegd
-- CORS proxy ondersteuning voor omzeilen van API beperkingen
-- Uitgebreide animatie instellingen (easing functies, vloeiendheid)
-- Verbeterde kaartconfiguratieopties (zoom limieten, schaalbalk)
-- Mogelijkheid om API key via eigenschappen paneel in te stellen
-- Update-indicator tijdens het laden van nieuwe gegevens
-- Optie om tabel al dan niet bij te werken tijdens automatische verversing
-- Meer opties voor het afhandelen van selecties
-- Uitgebreide README met configuratie-instructies en API-informatie
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-### Verbeterd
-- Memory management en resource gebruik (minder memory leaks)
-- Betere foutafhandeling in alle modules
-- Prestatieverbetering bij grote hoeveelheden treindata met Set-based filtering
-- XSS-beveiliging bij het weergeven van treingegevens
-- Efficiëntere event handling met namespaced events
-- Verbeterde animaties voor positie-updates
-- Robuustere AJAX requests met retry mechanisme
-- Consistente scope toegang in controller 
-- Betere validatie van API responses
-- Betere ondersteuning voor verschillende Qlik Sense thema's
+## [1.0.0] - 2025-02-28
 
-### Gerepareerd
-- ReferenceError in trainDataService.startAutoRefresh functie
-- Race conditions bij kaartinitialisatie
-- Oneindige lussen door wederzijdse functieaanroepen
-- DOM-manipulatie in de controller verplaatst naar render-functies
-- Ongeldige coördinatenvalidatie toegevoegd
-- Verbeterde cleanup van resources bij verwijderen extensie
+### Added
+- Initial release of the LiveTrainExtension
+- Real-time train tracking visualization on an interactive map
+- Integration with NS-API for live train data
+- Filtering based on Qlik Sense selections
+- Ability to select trains directly from the map
+- Dynamic updates with configurable refresh interval
+- Train position animation with customizable settings
+- Info popups with train details (number, position, delay, etc.)
+- Color-coding of trains based on status (on time, delayed)
+- Visual update indicator during data refreshes
+- Complete support for Qlik Cloud environments
+- Qlik theme integration (light/dark mode support)
 
-## Versie 1.0.0 - Initiële release
+### Security
+- Improved XSS protection through proper HTML escaping
+- API key management via separate file (not included in version control)
+- Support for API key storage in Qlik variables for cloud environments
 
-- Basisimplementatie van Qlik Sense extensie voor het volgen van treinen
-- Live weergave van treinposities op een interactieve kaart
-- Filtering op basis van geselecteerde treinnummers in Qlik Sense
-- Real-time updates van treinposities
-- Configureerbare verversingsfrequentie
-- Integratie met NS API
+### Performance
+- Set-based filtering for better performance with large datasets
+- Memory leak prevention through improved event handler management
+- Race condition prevention in asynchronous operations
+- Efficient DOM manipulation via native DOM APIs
+- Event delegation for improved performance
+
+### Documentation
+- Comprehensive README with installation and configuration instructions
+- API key setup documentation
+- Qlik Cloud compatibility guide
+- External libraries bundling instructions
