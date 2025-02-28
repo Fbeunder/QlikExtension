@@ -12,6 +12,8 @@ LiveTrainExtension/
 ├── LiveTrainExtension.qext       # Qlik extensie metadata bestand
 ├── initialProperties.js          # Initiële eigenschappen configuratie
 ├── propertyPanel.js              # Configuratie van het eigenschappen paneel
+├── QLIK_CLOUD_COMPATIBILITY.md   # Documentatie voor Qlik Cloud compatibiliteit
+├── EXTERNAL_LIBRARIES.md         # Instructies voor bundelen van bibliotheken
 ├── api/
 │   ├── trainDataService.js       # Service voor het ophalen van treingegevens
 │   ├── apiConfig.js              # API configuratie en endpoints
@@ -30,7 +32,7 @@ LiveTrainExtension/
 ## 3. Modules
 
 ### 3.1 LiveTrainExtension.js
-* **Status**: Voltooid - Geïntegreerd met trainDataService, selectiemogelijkheden, mapRenderer, trainVisualizer, en dynamische updates. Functionele fouten opgelost waaronder memory leaks, XSS-kwetsbaarheden, inefficiënte filtering, race conditions en betere foutafhandeling.
+* **Status**: Voltooid - Geïntegreerd met trainDataService, selectiemogelijkheden, mapRenderer, trainVisualizer, en dynamische updates. Functionele fouten opgelost waaronder memory leaks, XSS-kwetsbaarheden, inefficiënte filtering, race conditions en betere foutafhandeling. Geoptimaliseerd voor Qlik Cloud met verbeterde DOM-manipulatie, event delegatie en CSP-naleving.
 * **Bestandsnaam**: LiveTrainExtension.js
 * **Functionaliteit**: Hoofdmodule die de extensie initialiseert en integreert met Qlik Sense
 * **Belangrijkste functies**:
@@ -92,6 +94,17 @@ LiveTrainExtension/
       * str (String): String om te escapen
     * Return waarde: Geescapede string om XSS-aanvallen te voorkomen
     * Afhankelijkheden: Geen
+  * `createElement(tag, attrs, content)`:
+    * Parameters:
+      * tag (String): HTML tag naam
+      * attrs (Object): Attributen voor het element
+      * content (String|Array): Inhoud van het element
+    * Return waarde: HTMLElement
+    * Afhankelijkheden: Geen
+  * `isQlikCloudEnvironment()`:
+    * Parameters: Geen
+    * Return waarde: Boolean die aangeeft of de app in Qlik Cloud draait
+    * Afhankelijkheden: trainDataService.js
 
 ### 3.2 LiveTrainExtension.qext
 * **Status**: Voltooid
@@ -116,7 +129,7 @@ LiveTrainExtension/
     * Afhankelijkheden: Geen
 
 ### 3.5 trainDataService.js
-* **Status**: Voltooid - Bijgewerkt voor integratie met NS-API en ReferenceError opgelost in startAutoRefresh
+* **Status**: Voltooid - Bijgewerkt voor integratie met NS-API, ReferenceError opgelost in startAutoRefresh, en geoptimaliseerd voor Qlik Cloud met verbeterde CORS-handling en credentials management
 * **Bestandsnaam**: api/trainDataService.js
 * **Functionaliteit**: Service voor het ophalen van treingegevens van externe API's
 * **Belangrijkste functies**:
@@ -151,9 +164,17 @@ LiveTrainExtension/
       * trainData (Object): Treingegevens uit de API
     * Return waarde: Number met de vertraging in minuten
     * Afhankelijkheden: Geen
+  * `detectQlikCloudEnvironment()`:
+    * Parameters: Geen
+    * Return waarde: Boolean die aangeeft of we in Qlik Cloud draaien
+    * Afhankelijkheden: qlik
+  * `isQlikCloudEnvironment()`:
+    * Parameters: Geen
+    * Return waarde: Boolean die aangeeft of de app in Qlik Cloud draait
+    * Afhankelijkheden: Geen
 
 ### 3.6 apiConfig.js
-* **Status**: Voltooid - Bijgewerkt voor het gebruik van externe apiKey.js file voor API key beheer
+* **Status**: Voltooid - Bijgewerkt voor het gebruik van externe apiKey.js file voor API key beheer en Qlik variabelen voor Qlik Cloud
 * **Bestandsnaam**: api/apiConfig.js
 * **Functionaliteit**: Configuratie voor API-endpoints en authenticatie
 * **Belangrijkste functies**: 
@@ -167,6 +188,10 @@ LiveTrainExtension/
       * environment (string, optional): Omgeving ('dev' of 'prod')
     * Return waarde: Geen
     * Afhankelijkheden: apiKey.js
+  * `loadApiKeyFromQlik()`: 
+    * Parameters: Geen
+    * Return waarde: Promise die resolvet wanneer de API key is geladen of faalt
+    * Afhankelijkheden: qlik
   * `configure(options)`: 
     * Parameters: 
       * options (Object): Configuratie opties
@@ -325,22 +350,36 @@ LiveTrainExtension/
     * Return waarde: Geen
     * Afhankelijkheden: jQuery
 
+### 3.13 QLIK_CLOUD_COMPATIBILITY.md
+* **Status**: Voltooid
+* **Bestandsnaam**: QLIK_CLOUD_COMPATIBILITY.md
+* **Functionaliteit**: Documentatie over Qlik Cloud compatibiliteit van de extensie
+* **Belangrijkste functies**: N.v.t. (Markdown documentatie bestand)
+
+### 3.14 EXTERNAL_LIBRARIES.md
+* **Status**: Voltooid
+* **Bestandsnaam**: EXTERNAL_LIBRARIES.md
+* **Functionaliteit**: Instructies voor het bundelen van externe bibliotheken voor Qlik Cloud
+* **Belangrijkste functies**: N.v.t. (Markdown documentatie bestand)
+
 ## 4. Status
 Voltooide modules:
-- LiveTrainExtension.js (geoptimaliseerd met verbeterde event handling, XSS-beveiliging, efficiëntere filtering, en betere foutafhandeling)
+- LiveTrainExtension.js (geoptimaliseerd met verbeterde event handling, XSS-beveiliging, efficiëntere filtering, betere foutafhandeling en Qlik Cloud compatibiliteit)
 - LiveTrainExtension.qext
 - initialProperties.js (uitgebreid met standaardwaarden voor dynamische updates)
 - propertyPanel.js (uitgebreid met configuratie-opties voor dynamische updates en animatie)
-- api/trainDataService.js (bijgewerkt voor integratie met NS-API en ReferenceError opgelost)
-- api/apiConfig.js (bijgewerkt voor het laden van API sleutels uit separate file)
+- api/trainDataService.js (bijgewerkt voor integratie met NS-API, ReferenceError opgelost en geoptimaliseerd voor Qlik Cloud met verbeterde CORS-handling)
+- api/apiConfig.js (bijgewerkt voor het laden van API sleutels uit separate file en Qlik variabelen)
 - api/apiKey.js (nieuw: aparte module voor veilig beheer van API sleutels)
 - api/apiKey.template.js (nieuw: template voor het maken van apiKey.js)
 - ui/mapRenderer.js
 - ui/trainVisualizer.js (uitgebreid met animatie en update-indicator functionaliteit)
 - lib/css/style.css (bijgewerkt met styling voor dynamische updates, animaties en toggle controls)
 - lib/js/qlik-style.js
-- README.md (bijgewerkt met duidelijke instructies voor NS-API configuratie en apiKey.js gebruik)
+- README.md (bijgewerkt met duidelijke instructies voor NS-API configuratie en apiKey.js gebruik, en Qlik Cloud specifieke informatie)
 - .gitignore (toegevoegd om apiKey.js uit te sluiten van versiecontrole)
+- QLIK_CLOUD_COMPATIBILITY.md (nieuw: documentatie over Qlik Cloud compatibiliteit)
+- EXTERNAL_LIBRARIES.md (nieuw: instructies voor het bundelen van externe bibliotheken)
 
 Alle modules zijn nu volledig geïmplementeerd, geïntegreerd en geoptimaliseerd. De belangrijke bugs en functionele fouten in LiveTrainExtension.js zijn opgelost, waaronder:
 - Memory leaks door meervoudige event handlers
@@ -352,7 +391,14 @@ Alle modules zijn nu volledig geïmplementeerd, geïntegreerd en geoptimaliseerd
 - Inconsistente scope toegang
 - Foutafhandeling voor randgevallen
 
-De extensie beschikt nu over alle gewenste functionaliteit, inclusief real-time updates, vloeiende animaties en gebruikersvriendelijke configuratiemogelijkheden, en is robuuster, veiliger en efficiënter gemaakt voor productiegebruik.
+De extensie is nu ook volledig compatibel gemaakt met Qlik Cloud door:
+- Verbeterde API key management met ondersteuning voor Qlik variabelen
+- Geavanceerde CORS-handling en credentials management
+- Efficiëntere DOM-manipulatie via native DOM API's
+- Event delegatie voor betere performance
+- Documentatie voor bundeling van externe bibliotheken
+
+De extensie beschikt nu over alle gewenste functionaliteit, inclusief real-time updates, vloeiende animaties en gebruikersvriendelijke configuratiemogelijkheden, en is robuuster, veiliger en efficiënter gemaakt voor productiegebruik, zowel in Qlik Sense Desktop als Qlik Cloud.
 
 ## 5. Volgende stappen
 
@@ -369,20 +415,22 @@ De extensie beschikt nu over alle gewenste functionaliteit, inclusief real-time 
 10. ✅ Bugfix voor ReferenceError in trainDataService.js - opgelost
 11. ✅ Optimalisatie van LiveTrainExtension.js met functieonele verbeteringen (memory leaks, XSS-beveiliging, etc.)
 12. ✅ Implementatie van aparte apiKey.js file voor veilig API key beheer
+13. ✅ Compatibiliteit met Qlik Cloud - geoptimaliseerd voor Qlik Cloud met verbeterde CORS-handling, DOM-manipulatie en documentatie
 
-Alle must-have functionaliteiten zijn nu geïmplementeerd, getest en geoptimaliseerd. De extensie is volledig functioneel, veilig en efficiënt voor gebruik in productieomgevingen.
+Alle must-have functionaliteiten zijn nu geïmplementeerd, getest en geoptimaliseerd. De extensie is volledig functioneel, veilig en efficiënt voor gebruik in productieomgevingen, inclusief Qlik Cloud.
 
 ### Nice-to-haves:
 1. ✅ Aanpasbare verversingsfrequentie van treingegevens via het eigenschappen paneel (geïmplementeerd)
-2. Mogelijkheid om verschillende kaartlagen te tonen/verbergen
-3. Historische weergave van treinbewegingen
+2. 🔄 Mogelijkheid om verschillende kaartlagen te tonen/verbergen
+3. 🔄 Historische weergave van treinbewegingen
 4. ✅ Extra informatie tonen bij klikken op een trein (vertraging, bestemming, etc.) (geïmplementeerd)
 5. ✅ Kleurcodering van treinen op basis van status (op tijd, vertraagd, etc.) (geïmplementeerd)
 6. ✅ Animatie van treinbewegingen op de kaart (geïmplementeerd)
-7. Uitgebreidere configuratiemogelijkheden voor de visuele weergave
+7. 🔄 Uitgebreidere configuratiemogelijkheden voor de visuele weergave
 8. ✅ Prestatieoptimalisaties voor grote hoeveelheden treingegevens (geïmplementeerd via Set-based filtering)
-9. Beter gebruik van namespaced events voor opruiming
+9. ✅ Beter gebruik van namespaced events voor opruiming (geïmplementeerd met event delegatie)
 10. ✅ Verbeterde foutafhandeling en robuustheid (geïmplementeerd)
 11. ✅ Veilige API key opslag gescheiden van de hoofdcode (geïmplementeerd)
+12. ✅ Qlik Cloud compatibiliteit (geïmplementeerd met verbeterde CORS-handling, DOM-manipulatie en documentatie)
 
-Alle essentiële functionaliteiten en optimalisaties zijn afgerond. De extensie biedt gebruikers een interactieve, veilige en informatieve manier om treinen in real-time te volgen. De resterende nice-to-have features kunnen in toekomstige iteraties worden toegevoegd om de extensie verder te verbeteren.
+De extensie is nu volledig klaar voor productiegebruik. Alle essentiële functionaliteiten en compatibiliteit met Qlik Cloud zijn geïmplementeerd en getest. De resterende nice-to-have functionaliteiten (verschillende kaartlagen, historische weergave, uitgebreidere configuratie) kunnen in toekomstige iteraties worden toegevoegd, maar zijn niet essentieel voor de basiswerking van de applicatie.
