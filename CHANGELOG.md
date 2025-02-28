@@ -5,6 +5,13 @@ All notable changes to the LiveTrainExtension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2025-02-28
+
+### Fixed
+- TypeError bug in animation settings configuration when using the `$scope.$parent.object.configureAnimationSettings` function
+- Improved object reference handling in Angular scope to prevent errors during animation settings updates
+- Added fallback mechanism to directly use trainVisualizer.configureAnimation when object reference is unavailable
+
 ## [1.0.0] - 2025-02-28
 
 ### Added
