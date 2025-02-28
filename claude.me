@@ -28,7 +28,7 @@ LiveTrainExtension/
 ## 3. Modules
 
 ### 3.1 LiveTrainExtension.js
-* **Status**: Voltooid - Geïntegreerd met trainDataService, selectiemogelijkheden, mapRenderer, trainVisualizer, en dynamische updates. Bug in configureAnimationSettings opgelost.
+* **Status**: Voltooid - Geïntegreerd met trainDataService, selectiemogelijkheden, mapRenderer, trainVisualizer, en dynamische updates. Functionele fouten opgelost waaronder memory leaks, XSS-kwetsbaarheden, inefficiënte filtering, race conditions en betere foutafhandeling.
 * **Bestandsnaam**: LiveTrainExtension.js
 * **Functionaliteit**: Hoofdmodule die de extensie initialiseert en integreert met Qlik Sense
 * **Belangrijkste functies**:
@@ -62,6 +62,10 @@ LiveTrainExtension/
       * $element (jQuery): jQuery element om te updaten
     * Return waarde: Geen
     * Afhankelijkheden: trainDataService.js
+  * `getTrainNumberFieldName()`: 
+    * Parameters: Geen
+    * Return waarde: String met de veldnaam voor treinnummers
+    * Afhankelijkheden: Geen
   * `controller()`: 
     * Parameters: Geen
     * Return waarde: Controller object
@@ -81,6 +85,11 @@ LiveTrainExtension/
     * Parameters: Geen
     * Return waarde: Geen
     * Afhankelijkheden: Qlik API
+  * `escapeHtml(str)`:
+    * Parameters:
+      * str (String): String om te escapen
+    * Return waarde: Geescapede string om XSS-aanvallen te voorkomen
+    * Afhankelijkheden: Geen
 
 ### 3.2 LiveTrainExtension.qext
 * **Status**: Voltooid
@@ -290,7 +299,7 @@ LiveTrainExtension/
 
 ## 4. Status
 Voltooide modules:
-- LiveTrainExtension.js (geïntegreerd met trainDataService, selectiefunctionaliteit, mapRenderer, trainVisualizer en dynamische updates)
+- LiveTrainExtension.js (geoptimaliseerd met verbeterde event handling, XSS-beveiliging, efficiëntere filtering, en betere foutafhandeling)
 - LiveTrainExtension.qext
 - initialProperties.js (uitgebreid met standaardwaarden voor dynamische updates)
 - propertyPanel.js (uitgebreid met configuratie-opties voor dynamische updates en animatie)
@@ -302,7 +311,17 @@ Voltooide modules:
 - lib/js/qlik-style.js
 - README.md (bijgewerkt met duidelijke instructies voor NS-API configuratie)
 
-Alle modules zijn nu volledig geïmplementeerd, geïntegreerd en bugvrij. De belangrijke bugs in LiveTrainExtension.js en trainDataService.js zijn opgelost, waardoor de kaart nu correct wordt weergegeven en de automatische verversing werkt. De extensie beschikt over alle gewenste functionaliteit, inclusief real-time updates, vloeiende animaties en gebruikersvriendelijke configuratiemogelijkheden.
+Alle modules zijn nu volledig geïmplementeerd, geïntegreerd en geoptimaliseerd. De belangrijke bugs en functionele fouten in LiveTrainExtension.js zijn opgelost, waaronder:
+- Memory leaks door meervoudige event handlers
+- XSS-kwetsbaarheden door directe HTML concatenatie
+- Inefficiënte filtering bij grote datasets
+- Race conditions bij kaartinitialisatie
+- Oneindige lussen door wederzijdse functieaanroepen
+- DOM-manipulatie in de controller
+- Inconsistente scope toegang
+- Foutafhandeling voor randgevallen
+
+De extensie beschikt nu over alle gewenste functionaliteit, inclusief real-time updates, vloeiende animaties en gebruikersvriendelijke configuratiemogelijkheden, en is robuuster, veiliger en efficiënter gemaakt voor productiegebruik.
 
 ## 5. Volgende stappen
 
@@ -317,8 +336,9 @@ Alle modules zijn nu volledig geïmplementeerd, geïntegreerd en bugvrij. De bel
 8. ✅ Correcte implementatie van NS-API integratie
 9. ✅ Bugfix voor kaartweergaveproblemen - opgelost
 10. ✅ Bugfix voor ReferenceError in trainDataService.js - opgelost
+11. ✅ Optimalisatie van LiveTrainExtension.js met functieonele verbeteringen (memory leaks, XSS-beveiliging, etc.)
 
-Alle must-have functionaliteiten zijn nu geïmplementeerd en getest. De extensie is volledig functioneel en klaar voor gebruik in productieomgevingen. Verdere verbeteringen zouden nice-to-have verbeteringen zijn die de gebruikerservaring verder kunnen verbeteren.
+Alle must-have functionaliteiten zijn nu geïmplementeerd, getest en geoptimaliseerd. De extensie is volledig functioneel, veilig en efficiënt voor gebruik in productieomgevingen.
 
 ### Nice-to-haves:
 1. ✅ Aanpasbare verversingsfrequentie van treingegevens via het eigenschappen paneel (geïmplementeerd)
@@ -328,8 +348,8 @@ Alle must-have functionaliteiten zijn nu geïmplementeerd en getest. De extensie
 5. ✅ Kleurcodering van treinen op basis van status (op tijd, vertraagd, etc.) (geïmplementeerd)
 6. ✅ Animatie van treinbewegingen op de kaart (geïmplementeerd)
 7. Uitgebreidere configuratiemogelijkheden voor de visuele weergave
-8. Prestatieoptimalisaties voor grote hoeveelheden treingegevens
+8. ✅ Prestatieoptimalisaties voor grote hoeveelheden treingegevens (geïmplementeerd via Set-based filtering)
+9. Beter gebruik van namespaced events voor opruiming
+10. ✅ Verbeterde foutafhandeling en robuustheid (geïmplementeerd)
 
-Alle essentiële functionaliteiten zijn afgerond en de kritieke bugfixes voor het tonen van de kaart en automatische verversing zijn geïmplementeerd. De resterende nice-to-have features kunnen in toekomstige iteraties worden toegevoegd om de extensie verder te verbeteren, maar zijn niet noodzakelijk voor de basiswerking van de applicatie. De extensie is nu volledig operationeel en biedt gebruikers een interactieve en informatieve manier om treinen in real-time te volgen.
-
-De basiswerking van de applicatie is nu volledig geïmplementeerd en alle must-have features zijn afgerond. De extensie is klaar voor gebruik en alle kritieke issues zijn opgelost. De resterende taken zijn alleen verbeteringen die niet essentieel zijn voor de kernfunctionaliteit van de extensie.
+Alle essentiële functionaliteiten en optimalisaties zijn afgerond. De extensie biedt gebruikers een interactieve, veilige en informatieve manier om treinen in real-time te volgen. De resterende nice-to-have features kunnen in toekomstige iteraties worden toegevoegd om de extensie verder te verbeteren.
