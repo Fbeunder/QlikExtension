@@ -890,76 +890,139 @@ define([
           // Verbeterde logica voor het vinden van de juiste objectreferentie
           var obj = null;
           
-          // Methode 1: Gebruik de opgeslagen extensionInstance die we zojuist hebben opgeslagen
+          // Methode 1: Probeer eerst direct via extensionInstance
           if (extensionInstance && typeof extensionInstance.getSelectedTrainNumbers === 'function') {
             obj = extensionInstance;
           }
-          // Methode 2: Gebruik de extensie-instance die we hebben opgeslagen in het element
-          else if ($element && $element.data('extensionInstance') && 
-                  typeof $element.data('extensionInstance').getSelectedTrainNumbers === 'function') {
-            obj = $element.data('extensionInstance');
+          // Methode 2: Zoek in het element via data attribute
+          else if ($element && $element.data && typeof $element.data === 'function') {
+            var savedInstance = $element.data('extensionInstance');
+            if (savedInstance && typeof savedInstance.getSelectedTrainNumbers === 'function') {
+              obj = savedInstance;
+            }
           }
-          // Methode 3: Probeer via de parent scope
-          else if ($scope.$parent && $scope.$parent.object && 
-                  typeof $scope.$parent.object.getSelectedTrainNumbers === 'function') {
+          // Methode 3: Zoek via de controller van de scope
+          else if ($scope.layout && $scope.$parent && $scope.$parent.object && 
+                typeof $scope.$parent.object.getSelectedTrainNumbers === 'function') {
             obj = $scope.$parent.object;
           }
-          // Methode 4: Probeer via $element.data('object')
-          else if ($element && $element.data && typeof $element.data === 'function') {
-            obj = $element.data('object');
-            if (!obj || typeof obj.getSelectedTrainNumbers !== 'function') {
-              obj = null;
-            }
-          }
-          // Methode 5: Probeer via de grootouder-scope als laatste poging
-          else if ($scope.$parent && $scope.$parent.$parent && $scope.$parent.$parent.object &&
-                 typeof $scope.$parent.$parent.object.getSelectedTrainNumbers === 'function') {
-            obj = $scope.$parent.$parent.object;
-          }
-          
-          // Controleer of we een geldig object hebben gevonden
-          if (!obj) {
-            console.error('Kan geen geldig object vinden met getSelectedTrainNumbers functie. ' + 
-                          'Auto-refresh stopt totdat het probleem is opgelost.');
-            $scope.stopAutoRefresh();
-            return;
-          }
-          
-          try {
-            // Update train markers bij nieuwe data
-            var currentTrainNumbers = obj.getSelectedTrainNumbers($scope.layout);
-            obj.updateTrainVisualization(data, currentTrainNumbers, $scope.layout);
-            
-            // Update het tijdstip van laatste update in de UI via de scope
-            var lastUpdate = trainDataService.getLastUpdateTime();
-            if (lastUpdate) {
-              $scope.lastUpdateTime = lastUpdate.toLocaleTimeString();
+          // Methode 4: Implementeer fallback methode als laatste optie
+          else {
+            // Functie voor het ophalen van geselecteerde treinnummers direct vanuit de layout
+            var fallbackGetSelectedTrainNumbers = function(layout) {
+              var trainNumbers = [];
               
-              // Update binnen Angular digest cycle
-              $scope.$applyAsync(function() {
-                var $lastUpdateEl = $element.find('.last-update');
-                if ($lastUpdateEl.length) {
-                  $lastUpdateEl.text('Laatst bijgewerkt: ' + $scope.lastUpdateTime);
+              try {
+                // Controleer of we een hypercube hebben met data
+                if (layout && layout.qHyperCube && 
+                  layout.qHyperCube.qDataPages && 
+                  layout.qHyperCube.qDataPages.length > 0 &&
+                  layout.qHyperCube.qDataPages[0].qMatrix) {
+                  
+                  // Haal waarden op
+                  var matrix = layout.qHyperCube.qDataPages[0].qMatrix;
+                  
+                  // Extraheer treinnummers
+                  trainNumbers = matrix.map(function(row) {
+                    return row[0].qText;
+                  }).filter(function(value) {
+                    return value !== undefined && value !== null && value !== '';
+                  });
                 }
-              });
-            }
+              } catch (e) {
+                console.warn('Fout bij ophalen treinnummers in fallback functie:', e);
+              }
+              
+              return trainNumbers;
+            };
             
-            // Bij elke update de extensie opnieuw renderen als dat nodig is
-            // We gebruiken applyAsync om beter te presteren met veel updates
-            if (self.$scope && self.$scope.layout && self.$scope.layout.updateTableOnRefresh) {
-              $scope.$applyAsync(function() {
-                if ($scope.layout && $scope.layout.autoRefresh) {
-                  // Gebruik het eerder gevonden object
-                  obj.paint($element, $scope.layout);
+            // Maak dummy object met benodigde methodes
+            obj = {
+              getSelectedTrainNumbers: fallbackGetSelectedTrainNumbers,
+              updateTrainVisualization: function(data, trainIds, layout) {
+                try {
+                  // Zoek het map object
+                  var map = mapRenderer.getMap();
+                  if (!map) return;
+                  
+                  // Filter de gegevens indien nodig
+                  var filteredData = data;
+                  if (trainIds && trainIds.length > 0 && layout.filterBySelection) {
+                    var selectedSet = new Set(trainIds.map(function(id) {
+                      return String(id).trim();
+                    }));
+                    
+                    filteredData = data.filter(function(train) {
+                      return train.number && selectedSet.has(String(train.number).trim());
+                    });
+                  }
+                  
+                  // Update markers
+                  trainVisualizer.updateTrainPositions(map, filteredData, trainIds, null);
+                } catch (err) {
+                  console.error('Fout in fallback updateTrainVisualization:', err);
                 }
-              });
+              }
+            };
+          }
+          
+          // Controleer of we een geldig object hebben gevonden en gebruik het
+          if (obj) {
+            try {
+              // Update trein markers bij nieuwe data
+              var currentTrainNumbers = obj.getSelectedTrainNumbers($scope.layout);
+              obj.updateTrainVisualization(data, currentTrainNumbers, $scope.layout);
+              
+              // Update het tijdstip van laatste update in de UI
+              var lastUpdate = trainDataService.getLastUpdateTime();
+              if (lastUpdate) {
+                $scope.lastUpdateTime = lastUpdate.toLocaleTimeString();
+                
+                // Update binnen Angular digest cycle
+                $scope.$applyAsync(function() {
+                  var $lastUpdateEl = $element.find('.last-update');
+                  if ($lastUpdateEl.length) {
+                    $lastUpdateEl.text('Laatst bijgewerkt: ' + $scope.lastUpdateTime);
+                  }
+                });
+              }
+              
+              // Bij elke update de extensie opnieuw renderen als dat nodig is
+              if (self.$scope && self.$scope.layout && self.$scope.layout.updateTableOnRefresh) {
+                $scope.$applyAsync(function() {
+                  if ($scope.layout && $scope.layout.autoRefresh) {
+                    try {
+                      // Probeer te bepalen welke methode we moeten gebruiken voor paint
+                      if (typeof obj.paint === 'function') {
+                        // Als obj.paint bestaat, gebruik het
+                        obj.paint($element, $scope.layout);
+                      } else if (extensionInstance && typeof extensionInstance.paint === 'function') {
+                        // Anders, probeer de originele extensionInstance te gebruiken
+                        extensionInstance.paint($element, $scope.layout);
+                      }
+                    } catch (paintErr) {
+                      console.warn('Kon extensie niet renderen in autorefresh:', paintErr);
+                    }
+                  }
+                });
+              }
+            } catch (err) {
+              console.error('Fout in autoRefresh callback:', err);
+              // Geef een waarschuwing maar stop refresh niet automatisch meer
+              console.warn('Fout opgetreden tijdens auto-refresh, blijf proberen...');
             }
-          } catch (err) {
-            console.error('Fout in autoRefresh callback:', err);
-            // Als we een ernstige fout krijgen, stoppen we de autorefresh om oneindige fouten te voorkomen
-            if (err.toString().indexOf('TypeError') !== -1) {
-              console.warn('Auto-refresh gestopt vanwege TypeError. Start handmatig opnieuw.');
-              $scope.stopAutoRefresh();
+          } else {
+            console.warn('Geen geldig object gevonden met getSelectedTrainNumbers functie, ' +
+                          'maar auto-refresh blijft actief. Probeer alleen data updates...');
+            
+            // Probeer minstens de markers bij te werken zonder objectreferentie
+            try {
+              var map = mapRenderer.getMap();
+              if (map && data) {
+                trainVisualizer.updateTrainPositions(map, data, [], null);
+              }
+            } catch (e) {
+              console.error('Minimale fallback voor marker updates mislukt:', e);
             }
           }
         }, refreshInterval);
