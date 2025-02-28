@@ -36,7 +36,7 @@ LiveTrainExtension/
 ## 3. Modules
 
 ### 3.1 LiveTrainExtension.js
-* **Status**: Voltooid - Geïntegreerd met trainDataService, selectiemogelijkheden, mapRenderer, trainVisualizer, en dynamische updates. Functionele fouten opgelost waaronder memory leaks, XSS-kwetsbaarheden, inefficiënte filtering, race conditions, betere foutafhandeling en problemen met object referenties in de Angular scope. Geoptimaliseerd voor Qlik Cloud met verbeterde DOM-manipulatie, event delegatie en CSP-naleving. Bug gerepareerd met betrekking tot object referenties in de startAutoRefresh functie.
+* **Status**: Voltooid - Geïntegreerd met trainDataService, selectiemogelijkheden, mapRenderer, trainVisualizer, en dynamische updates. Functionele fouten opgelost waaronder memory leaks, XSS-kwetsbaarheden, inefficiënte filtering, race conditions, betere foutafhandeling en problemen met object referenties in de Angular scope. Geoptimaliseerd voor Qlik Cloud met verbeterde DOM-manipulatie, event delegatie en CSP-naleving. Bug gerepareerd met betrekking tot object referenties in de startAutoRefresh functie. Bug opgelost in de objectreferentie lookup in de auto-refresh functionaliteit waardoor de refreshes niet correct werkten.
 * **Bestandsnaam**: LiveTrainExtension.js
 * **Functionaliteit**: Hoofdmodule die de extensie initialiseert en integreert met Qlik Sense
 * **Belangrijkste functies**:
@@ -409,7 +409,7 @@ LiveTrainExtension/
 
 ## 4. Status
 Voltooide modules:
-- LiveTrainExtension.js (geoptimaliseerd met verbeterde event handling, XSS-beveiliging, efficiëntere filtering, betere foutafhandeling en Qlik Cloud compatibiliteit, bugfixes voor object referentie problemen en startAutoRefresh functie)
+- LiveTrainExtension.js (geoptimaliseerd met verbeterde event handling, XSS-beveiliging, efficiëntere filtering, betere foutafhandeling en Qlik Cloud compatibiliteit, bugfixes voor object referentie problemen en startAutoRefresh functie, verbeterde objectreferentie lookup in de auto-refresh functionaliteit)
 - LiveTrainExtension.qext
 - initialProperties.js (uitgebreid met standaardwaarden voor dynamische updates)
 - propertyPanel.js (uitgebreid met configuratie-opties voor dynamische updates en animatie)
@@ -442,6 +442,7 @@ Alle modules zijn nu volledig geïmplementeerd, geïntegreerd en geoptimaliseerd
 - ReferenceError door undefined trainNumbers parameter in fetchWithFetch functie
 - Incorrecte regex patronen in calculateDelayInMinutes functie
 - Object referentie fouten in startAutoRefresh functie
+- Probleem met het vinden van het juiste object in de auto-refresh functionaliteit waardoor timers stopten
 
 De extensie is nu ook volledig compatibel gemaakt met Qlik Cloud door:
 - Verbeterde API key management met ondersteuning voor Qlik variabelen
@@ -475,6 +476,7 @@ Bovendien is een volledig geautomatiseerd build systeem geïmplementeerd waarmee
 16. ✅ Bugfix voor ReferenceError door undefined trainNumbers parameter in fetchWithFetch functie - opgelost
 17. ✅ Bugfix voor incorrecte regex patronen in calculateDelayInMinutes functie - opgelost
 18. ✅ Bugfix voor object referentie probleem in startAutoRefresh functie - opgelost
+19. ✅ Bugfix voor object referentie lookup in auto-refresh functionaliteit - opgelost
 
 Alle must-have functionaliteiten zijn nu geïmplementeerd, getest en geoptimaliseerd. De extensie is volledig functioneel, veilig en efficiënt voor gebruik in productieomgevingen, inclusief Qlik Cloud. Daarnaast is een geautomatiseerd build proces opgezet voor het genereren van productieklare distributiepakketten.
 
@@ -491,6 +493,7 @@ Alle must-have functionaliteiten zijn nu geïmplementeerd, getest en geoptimalis
 10. ✅ Verbeterde foutafhandeling en robuustheid (geïmplementeerd)
 11. ✅ Veilige API key opslag gescheiden van de hoofdcode (geïmplementeerd)
 12. ✅ Qlik Cloud compatibiliteit (geïmplementeerd met verbeterde CORS-handling, DOM-manipulatie en documentatie)
+13. ✅ Robuustere autorefresh functionaliteit die niet stopt bij problemen met object referenties (geïmplementeerd)
 
 De extensie is nu volledig klaar voor productiegebruik. Alle essentiële functionaliteiten en bugs zijn geïmplementeerd en opgelost. De resterende nice-to-have functionaliteiten (verschillende kaartlagen, historische weergave, uitgebreidere configuratie) kunnen in toekomstige iteraties worden toegevoegd, maar zijn niet essentieel voor de basiswerking van de applicatie.
 
