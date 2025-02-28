@@ -17,6 +17,8 @@ define(['jquery', './apiConfig'], function($, apiConfig) {
     var errorCount = 0;
     var MAX_ERROR_COUNT = 5;
     var refreshCallbacks = [];
+    var lastApiValidationCheck = null;
+    var API_VALIDATION_INTERVAL = 60000; // 1 minuut
     
     /**
      * Maakt de request headers aan voor API verzoeken
@@ -37,34 +39,81 @@ define(['jquery', './apiConfig'], function($, apiConfig) {
     }
     
     /**
+     * Controleer of de API configuratie geldig is
+     * @returns {boolean} True als configuratie geldig is, anders false
+     */
+    function validateApiConfiguration() {
+      // Voorkom te frequente validatie
+      var now = Date.now();
+      if (lastApiValidationCheck && (now - lastApiValidationCheck < API_VALIDATION_INTERVAL)) {
+        return true;
+      }
+      
+      // Markeer tijdstip van laatste validatie
+      lastApiValidationCheck = now;
+      
+      // Valideer configuratie
+      var validationResult = apiConfig.validate();
+      
+      if (!validationResult.isValid) {
+        console.error('API configuratie ongeldig:', validationResult.errors.join(', '));
+        return false;
+      }
+      
+      return true;
+    }
+    
+    /**
      * Voert de API call uit om treinlocaties op te halen
      * @param {Array} trainNumbers - Optionele array met treinnummers om te filteren
      * @returns {Promise} Promise die resolvet naar treinlocatie data
      */
     function fetchTrainLocationsFromAPI(trainNumbers) {
+      // Valideer API configuratie
+      if (!validateApiConfiguration()) {
+        return $.Deferred().reject(new Error('Ongeldige API configuratie. Controleer de API sleutel en instellingen.')).promise();
+      }
+      
       // Bouw de API URL op
       var url = apiConfig.buildUrl(apiConfig.endpoints.trainLocations);
       
       // Maak query parameters aan
       var params = Object.assign({}, apiConfig.defaultParams);
       
-      // Voer de AJAX request uit
-      return $.ajax({
+      // Voeg train_number filter toe als er treinnummers zijn opgegeven
+      if (trainNumbers && trainNumbers.length > 0 && Array.isArray(trainNumbers)) {
+        // Als de API een parameter voor treinnummer filter ondersteunt, voeg deze toe
+        // Voor de NS API is dit niet standaard, maar we bereiden ons voor op toekomstige mogelijkheden
+        if (trainNumbers.length <= 10) { // Beperk aantal voor URL-lengte
+          params.trainNumbers = trainNumbers.join(',');
+        }
+      }
+      
+      // Maak ajax-opties aan
+      var ajaxOptions = {
         url: url,
         type: 'GET',
         data: params,
         headers: getRequestHeaders(),
-        timeout: 15000 // 15 seconden timeout voor de NS API
-      }).then(function(response) {
+        timeout: 20000, // 20 seconden timeout voor de NS API
+        xhrFields: {
+          withCredentials: false
+        }
+      };
+      
+      // Voer de AJAX request uit met retry mechanisme
+      return executeWithRetry(function() {
+        return $.ajax(ajaxOptions);
+      }, 2).then(function(response) {
         // Reset error teller bij succesvolle call
         errorCount = 0;
         
         // Controleer of response geldig is
         if (!response) {
-          throw new Error('Empty response received from API');
+          throw new Error('Lege response ontvangen van API');
         }
         
-        // Filter resultaten op treinnummers als die zijn opgegeven
+        // Filter resultaten op treinnummers als die zijn opgegeven en niet in de API aanvraag zijn meegenomen
         if (trainNumbers && trainNumbers.length > 0) {
           return filterByTrainNumbers(response, trainNumbers);
         }
@@ -73,15 +122,61 @@ define(['jquery', './apiConfig'], function($, apiConfig) {
       }).catch(function(error) {
         // Houd bij hoeveel errors er zijn opgetreden
         errorCount++;
-        console.error('Error fetching train data:', error);
+        console.error('Fout bij ophalen treingegevens:', error);
         
         // Stop automatische verversing bij teveel errors
         if (errorCount >= MAX_ERROR_COUNT) {
           stopAutoRefresh();
-          console.error('Stopped auto refresh after ' + MAX_ERROR_COUNT + ' consecutive errors');
+          console.error('Automatische verversing gestopt na ' + MAX_ERROR_COUNT + ' opeenvolgende fouten');
         }
         
-        // Geef fout door aan aanroeper
+        // Geef fout door aan aanroeper met verbeterde foutinformatie
+        var errorMessage = 'Er is een fout opgetreden bij het ophalen van treingegevens';
+        
+        // Poging om specifiekere foutmelding te extraheren
+        if (error.status && error.statusText) {
+          errorMessage += ': ' + error.status + ' ' + error.statusText;
+        } else if (error.message) {
+          errorMessage += ': ' + error.message;
+        }
+        
+        throw new Error(errorMessage);
+      });
+    }
+    
+    /**
+     * Voert een functie uit met automatische retry bij falen
+     * @param {Function} fn - Functie die een promise retourneert
+     * @param {number} maxRetries - Maximaal aantal retries
+     * @param {number} retryDelay - Vertraging tussen retries in ms
+     * @param {number} currentRetry - Huidige retry (intern gebruik)
+     * @returns {Promise} Promise die resolvet naar het resultaat van de functie
+     */
+    function executeWithRetry(fn, maxRetries, retryDelay, currentRetry) {
+      // Standaardwaarden
+      maxRetries = maxRetries || 2;
+      retryDelay = retryDelay || 1000;
+      currentRetry = currentRetry || 0;
+      
+      return fn().catch(function(error) {
+        // Controleer of we nog een retry moeten doen
+        if (currentRetry < maxRetries) {
+          // Verhoog de retry teller
+          currentRetry++;
+          
+          // Log de retry poging
+          console.warn('API aanroep mislukt, opnieuw proberen (' + currentRetry + '/' + maxRetries + '):', error);
+          
+          // Wacht even voordat we opnieuw proberen
+          return new Promise(function(resolve) {
+            setTimeout(resolve, retryDelay);
+          }).then(function() {
+            // Probeer opnieuw
+            return executeWithRetry(fn, maxRetries, retryDelay, currentRetry);
+          });
+        }
+        
+        // Geen retries meer, gooi de fout door
         throw error;
       });
     }
@@ -101,8 +196,15 @@ define(['jquery', './apiConfig'], function($, apiConfig) {
       var trainNumberSet = new Set();
       trainNumbers.forEach(function(num) {
         // Zorg ervoor dat nummers als strings worden opgeslagen
-        trainNumberSet.add(String(num).trim());
+        if (num !== null && num !== undefined) {
+          trainNumberSet.add(String(num).trim());
+        }
       });
+      
+      // Als er geen geldige treinnummers zijn, retourneer leeg resultaat
+      if (trainNumberSet.size === 0) {
+        return { payload: { treinen: [] } };
+      }
       
       // Filter de treinen op treinnummer
       var filteredTrains = response.payload.treinen.filter(function(train) {
@@ -127,57 +229,82 @@ define(['jquery', './apiConfig'], function($, apiConfig) {
     function transformAPIResponse(response) {
       // Verbeterde validatie van de API response
       if (!response) {
-        console.warn('Received empty response');
+        console.warn('Lege respons ontvangen');
         return [];
       }
       
       if (!response.payload) {
-        console.warn('Response missing payload property');
+        console.warn('Respons mist payload eigenschap');
         return [];
       }
       
       if (!Array.isArray(response.payload.treinen)) {
-        console.warn('Response payload.treinen is not an array');
+        console.warn('Respons payload.treinen is geen array');
         return [];
       }
       
       // Transformeer de NS API data naar een bruikbaar formaat
       return response.payload.treinen.map(function(item) {
-        // Bepaal de status op basis van beschikbare data
-        var status = determineTrainStatus(item);
-        
-        // Basis treinobject met informatie
-        var train = {
-          id: item.treinNummer || 'unknown_' + Math.random().toString(36).substr(2, 9),
-          number: item.treinNummer || 'Onbekend',
-          position: {
-            lat: parseFloat(item.lat || 0),
-            lng: parseFloat(item.lng || 0)
-          },
-          speed: parseFloat(item.snelheid || 0),
-          heading: parseFloat(item.richting || 0),
-          timestamp: new Date(item.tijd || Date.now()),
-          status: status,
-          details: {
-            type: item.type || 'Onbekend',
-            operator: item.vervoerder || 'NS',
-            origin: item.herkomst || 'Onbekend',
-            destination: item.bestemming || 'Onbekend',
-            platform: item.spoor || 'Onbekend',
-            delay: calculateDelayInMinutes(item)
+        try {
+          // Bepaal de status op basis van beschikbare data
+          var status = determineTrainStatus(item);
+          
+          // Verzeker dat er geldige numerieke waarden zijn voor coördinaten
+          var lat = parseFloat(item.lat || 0);
+          var lng = parseFloat(item.lng || 0);
+          
+          // Valideer coördinaten
+          if (isNaN(lat) || isNaN(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
+            lat = 0;
+            lng = 0;
           }
-        };
-        
-        // Voeg eventuele extra gegevens toe
-        if (item.info) {
-          train.details.info = item.info;
+          
+          // Basis treinobject met informatie
+          var train = {
+            id: item.treinNummer || 'unknown_' + Math.random().toString(36).substr(2, 9),
+            number: item.treinNummer || 'Onbekend',
+            position: {
+              lat: lat,
+              lng: lng
+            },
+            speed: parseFloat(item.snelheid || 0),
+            heading: parseFloat(item.richting || 0),
+            timestamp: new Date(item.tijd || Date.now()),
+            status: status,
+            details: {
+              type: item.type || 'Onbekend',
+              operator: item.vervoerder || 'NS',
+              origin: item.herkomst || 'Onbekend',
+              destination: item.bestemming || 'Onbekend',
+              platform: item.spoor || 'Onbekend',
+              delay: calculateDelayInMinutes(item)
+            }
+          };
+          
+          // Voeg eventuele extra gegevens toe
+          if (item.info) {
+            train.details.info = item.info;
+          }
+          
+          if (item.materieel && Array.isArray(item.materieel)) {
+            train.details.materieel = item.materieel.join(', ');
+          }
+          
+          return train;
+        } catch (err) {
+          console.error('Fout bij transformeren van trein data:', err, item);
+          // Return een minimale geldig object om fouten te voorkomen
+          return {
+            id: item.treinNummer || 'error_' + Math.random().toString(36).substr(2, 9),
+            number: item.treinNummer || 'Fout',
+            position: { lat: 0, lng: 0 },
+            status: apiConfig.constants.TRAIN_STATUS.UNKNOWN,
+            details: { type: 'Fout', operator: 'Onbekend' }
+          };
         }
-        
-        if (item.materieel && Array.isArray(item.materieel)) {
-          train.details.materieel = item.materieel.join(', ');
-        }
-        
-        return train;
+      }).filter(function(train) {
+        // Filter ongeldige treinen uit
+        return train && train.id && train.position;
       });
     }
     
@@ -200,21 +327,32 @@ define(['jquery', './apiConfig'], function($, apiConfig) {
         return 0;
       }
       
-      // Extraheer de minuten uit de ISO8601 duration string
-      var minutesMatch = delayString.match(/PT(\d+)M/);
-      if (minutesMatch && minutesMatch[1]) {
-        return parseInt(minutesMatch[1], 10);
+      try {
+        // Extraheer de minuten uit de ISO8601 duration string
+        var minutesMatch = delayString.match(/PT(\\d+)M/);
+        if (minutesMatch && minutesMatch[1]) {
+          return parseInt(minutesMatch[1], 10);
+        }
+        
+        // Probeer ook uren te extraheren indien aanwezig (bijv. PT1H30M)
+        var hoursMatch = delayString.match(/PT(\\d+)H/);
+        if (hoursMatch && hoursMatch[1]) {
+          var hours = parseInt(hoursMatch[1], 10);
+          // Converteer uren naar minuten en voeg eventuele minuten toe
+          return hours * 60 + (minutesMatch && minutesMatch[1] ? parseInt(minutesMatch[1], 10) : 0);
+        }
+        
+        // Alternatieve aanpak: probeer als een getal te parsen
+        var numericDelay = parseFloat(delayString);
+        if (!isNaN(numericDelay)) {
+          return Math.max(0, Math.round(numericDelay));
+        }
+        
+        return 0;
+      } catch (err) {
+        console.error('Fout bij berekenen van vertraging:', err);
+        return 0;
       }
-      
-      // Probeer ook uren te extraheren indien aanwezig (bijv. PT1H30M)
-      var hoursMatch = delayString.match(/PT(\d+)H/);
-      if (hoursMatch && hoursMatch[1]) {
-        var hours = parseInt(hoursMatch[1], 10);
-        // Converteer uren naar minuten en voeg eventuele minuten toe
-        return hours * 60 + (minutesMatch && minutesMatch[1] ? parseInt(minutesMatch[1], 10) : 0);
-      }
-      
-      return 0;
     }
     
     /**
@@ -230,12 +368,15 @@ define(['jquery', './apiConfig'], function($, apiConfig) {
       
       // Uitgebreidere status bepaling
       if (!trainData.status) {
-        // Geen status informatie beschikbaar
+        // Geen status informatie beschikbaar, kijk naar vertraging
+        if (trainData.vertraging) {
+          return apiConfig.constants.TRAIN_STATUS.DELAYED;
+        }
         return apiConfig.constants.TRAIN_STATUS.UNKNOWN;
       }
       
       // Normaliseer de status string voor vergelijking
-      var normalizedStatus = trainData.status.toUpperCase();
+      var normalizedStatus = String(trainData.status).toUpperCase();
       
       if (normalizedStatus === 'NIET-GEPLAND' || normalizedStatus === 'CANCELLED') {
         return apiConfig.constants.TRAIN_STATUS.CANCELLED;
@@ -286,17 +427,14 @@ define(['jquery', './apiConfig'], function($, apiConfig) {
         refreshCallbacks.push(callback);
       }
       
-      // Als er al een timer loopt, alleen de nieuwe callback toevoegen
-      if (refreshTimer) {
-        console.log('Auto refresh already running, added new callback');
-        return;
-      }
+      // Stop eerst eventuele bestaande timer
+      stopAutoRefresh();
       
       // Valideer de interval
       var interval = (intervalSeconds || 30) * 1000; // Converteer naar milliseconden
       var refreshInterval = Math.max(
         apiConfig.constants.REFRESH_INTERVALS.MINIMUM,
-        interval || apiConfig.constants.REFRESH_INTERVALS.DEFAULT
+        Math.min(apiConfig.constants.REFRESH_INTERVALS.MAXIMUM, interval)
       );
       
       // Start nieuwe timer voor automatische updates
@@ -317,17 +455,17 @@ define(['jquery', './apiConfig'], function($, apiConfig) {
               try {
                 cb(data);
               } catch (e) {
-                console.error('Error in refresh callback:', e);
+                console.error('Fout in refresh callback:', e);
               }
             });
           })
           .catch(function(error) {
             isRefreshing = false;
-            console.error('Error during auto refresh:', error);
+            console.error('Fout tijdens automatische verversing:', error);
           });
       }, refreshInterval);
       
-      console.log('Auto refresh started with interval: ' + refreshInterval + 'ms');
+      console.log('Automatische verversing gestart met interval: ' + refreshInterval + 'ms');
     }
     
     /**
@@ -337,7 +475,7 @@ define(['jquery', './apiConfig'], function($, apiConfig) {
       if (refreshTimer) {
         clearInterval(refreshTimer);
         refreshTimer = null;
-        console.log('Auto refresh stopped');
+        console.log('Automatische verversing gestopt');
       }
     }
     
@@ -354,8 +492,9 @@ define(['jquery', './apiConfig'], function($, apiConfig) {
       isRefreshing = false;
       errorCount = 0;
       refreshCallbacks = [];
+      lastApiValidationCheck = null;
       
-      console.log('Train data service cleaned up');
+      console.log('Trein data service opgeschoond');
     }
     
     // Returneer publieke API
@@ -387,6 +526,14 @@ define(['jquery', './apiConfig'], function($, apiConfig) {
        */
       configure: function(options) {
         apiConfig.configure(options);
+      },
+      
+      /**
+       * Valideert de huidige API configuratie
+       * @returns {Object} Object met validatiestatus en eventuele foutmeldingen
+       */
+      validateApiConfig: function() {
+        return apiConfig.validate();
       },
       
       /**
