@@ -16,7 +16,10 @@ const packageJson = require('./package.json');
 
 // Configuration
 const config = {
-  // Source files & directories to include
+  // Source directory for the extension
+  sourceDir: 'LiveTrainExtension',
+  
+  // Source files & directories to include (relative to the source directory)
   include: [
     'LiveTrainExtension.js',
     'LiveTrainExtension.qext',
@@ -69,7 +72,7 @@ async function updateVersionInfo() {
   console.log('Updating version information...');
   
   // Read the qext file
-  const qextPath = 'LiveTrainExtension.qext';
+  const qextPath = path.join(config.sourceDir, 'LiveTrainExtension.qext');
   let qextContent = await fs.readJson(qextPath);
   
   // Update version to match package.json
@@ -91,8 +94,10 @@ async function createBuildStructure() {
   
   // Create necessary directories
   for (const file of config.include) {
-    const sourcePath = path.resolve(file);
+    const sourcePath = path.join(config.sourceDir, file);
     const targetPath = path.join(buildDir, file);
+    
+    console.log(`Processing: ${sourcePath} -> ${targetPath}`);
     
     if (await fs.pathExists(sourcePath)) {
       const stats = await fs.stat(sourcePath);
@@ -100,9 +105,11 @@ async function createBuildStructure() {
       if (stats.isDirectory()) {
         await fs.ensureDir(targetPath);
         await fs.copy(sourcePath, targetPath);
+        console.log(`Copied directory: ${sourcePath} -> ${targetPath}`);
       } else {
         await fs.ensureDir(path.dirname(targetPath));
         await fs.copy(sourcePath, targetPath);
+        console.log(`Copied file: ${sourcePath} -> ${targetPath}`);
       }
     } else {
       console.warn(`Warning: File not found: ${sourcePath}`);
@@ -121,6 +128,20 @@ async function createBuildStructure() {
     } else {
       console.warn(`Warning: External library not found: ${sourcePath}`);
       console.warn('Did you run "npm install" first?');
+    }
+  }
+  
+  // Copy root files that should be in the root of the extension
+  // This is a fallback mechanism to ensure backward compatibility
+  const requiredRootFiles = [
+    { src: path.join(config.sourceDir, 'LiveTrainExtension.qext'), 
+      dest: path.join(buildDir, 'LiveTrainExtension.qext') }
+  ];
+  
+  for (const file of requiredRootFiles) {
+    if (await fs.pathExists(file.src)) {
+      await fs.copy(file.src, file.dest);
+      console.log(`Copied root file: ${file.src} → ${file.dest}`);
     }
   }
   
