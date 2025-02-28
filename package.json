@@ -1,0 +1,35 @@
+{
+  "name": "live-train-extension",
+  "version": "1.0.0",
+  "description": "Qlik Sense extension for tracking live train locations",
+  "main": "LiveTrainExtension.js",
+  "scripts": {
+    "build": "node build.js",
+    "test": "echo \"No tests specified\" && exit 0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Fbeunder/QlikExtension.git"
+  },
+  "keywords": [
+    "qlik",
+    "sense",
+    "extension",
+    "trains",
+    "map",
+    "visualization"
+  ],
+  "author": "Fbeunder",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Fbeunder/QlikExtension/issues"
+  },
+  "homepage": "https://github.com/Fbeunder/QlikExtension#readme",
+  "dependencies": {
+    "leaflet": "^1.9.4"
+  },
+  "devDependencies": {
+    "archiver": "^6.0.1",
+    "fs-extra": "^11.2.0"
+  }
+}
