@@ -6,8 +6,9 @@
  * Gebruikt Leaflet voor het toevoegen en beheren van markers
  */
 define([
-    'jquery'
-], function($) {
+    'jquery',
+    '../lib/leaflet/leaflet' // Direct import of bundled leaflet library
+], function($, L) { // Note: L is now explicitly included as a parameter
     'use strict';
 
     // Module scope variabelen
