@@ -38,6 +38,57 @@ define([], function() {
           min: 0,
           max: 0
         },
+        apiSettings: {
+          type: 'items',
+          label: 'API Configuratie',
+          items: {
+            apiKeySection: {
+              component: 'text',
+              label: 'NS API Instellingen',
+              style: 'header'
+            },
+            apiKeyDescription: {
+              component: 'text',
+              label: 'API Key configuratie',
+              style: 'hint',
+              translation: 'Vul hier je NS API key in. Je kunt deze aanvragen via de NS Developer Portal.'
+            },
+            apiKey: {
+              ref: 'apiKey',
+              type: 'string',
+              label: 'NS API Key',
+              defaultValue: '',
+              expression: 'optional'
+            },
+            corsSection: {
+              component: 'text',
+              label: 'CORS Configuratie',
+              style: 'header'
+            },
+            corsSectionDescription: {
+              component: 'text',
+              label: 'CORS Proxy instellingen',
+              style: 'hint',
+              translation: 'Als je problemen hebt met CORS, kun je een proxy gebruiken.'
+            },
+            useCorsProxy: {
+              ref: 'useCorsProxy',
+              type: 'boolean',
+              label: 'Gebruik CORS proxy',
+              defaultValue: false
+            },
+            corsProxyUrl: {
+              ref: 'corsProxyUrl',
+              type: 'string',
+              label: 'CORS proxy URL',
+              defaultValue: '',
+              expression: 'optional',
+              show: function(data) {
+                return data.useCorsProxy === true;
+              }
+            }
+          }
+        },
         settings: {
           uses: 'settings',
           items: {
@@ -82,6 +133,16 @@ define([], function() {
                   type: 'boolean',
                   label: 'Geselecteerde treinen markeren',
                   defaultValue: true
+                },
+                trainNumberFieldName: {
+                  ref: 'trainNumberFieldName',
+                  type: 'string',
+                  label: 'Treinnummer veldnaam',
+                  defaultValue: '',
+                  expression: 'optional',
+                  show: function(data) {
+                    return data.selectionMode !== 'none';
+                  }
                 }
               }
             },
@@ -97,6 +158,47 @@ define([], function() {
                   min: 1,
                   max: 18
                 },
+                zoomLimits: {
+                  component: 'text',
+                  label: 'Zoom limieten',
+                  style: 'hint',
+                  translation: 'Je kunt min/max zoom niveaus instellen om de gebruikerservaring te verbeteren'
+                },
+                minZoom: {
+                  ref: 'minZoom',
+                  type: 'number',
+                  label: 'Minimum zoom niveau',
+                  defaultValue: 6,
+                  min: 1,
+                  max: 18
+                },
+                maxZoom: {
+                  ref: 'maxZoom',
+                  type: 'number',
+                  label: 'Maximum zoom niveau',
+                  defaultValue: 18,
+                  min: 1,
+                  max: 19
+                },
+                defaultCenter: {
+                  component: 'text',
+                  label: 'Standaard middelpunt',
+                  style: 'header'
+                },
+                defaultLat: {
+                  ref: 'defaultLat',
+                  type: 'number',
+                  label: 'Standaard breedtegraad',
+                  defaultValue: 52.1326,
+                  expression: 'optional'
+                },
+                defaultLng: {
+                  ref: 'defaultLng',
+                  type: 'number',
+                  label: 'Standaard lengtegraad',
+                  defaultValue: 5.2913,
+                  expression: 'optional'
+                },
                 followSelectedTrains: {
                   ref: 'followSelectedTrains',
                   type: 'boolean',
@@ -110,6 +212,12 @@ define([], function() {
                   defaultValue: 50,
                   min: 1,
                   max: 200
+                },
+                showScale: {
+                  ref: 'showScale',
+                  type: 'boolean',
+                  label: 'Toon schaalbalk',
+                  defaultValue: true
                 }
               }
             },
@@ -183,6 +291,15 @@ define([], function() {
                   label: 'Toon update-indicator',
                   defaultValue: true
                 },
+                updateTableOnRefresh: {
+                  ref: 'updateTableOnRefresh',
+                  type: 'boolean',
+                  label: 'Tabel bijwerken bij automatische verversing',
+                  defaultValue: false,
+                  show: function(data) {
+                    return data.autoRefresh === true;
+                  }
+                },
                 animationSection: {
                   component: 'text',
                   label: 'Animatie instellingen',
@@ -199,8 +316,43 @@ define([], function() {
                   type: 'number',
                   label: 'Animatieduur (milliseconden)',
                   defaultValue: 1000,
-                  min: 200,
+                  min: 100,
                   max: 5000,
+                  show: function(data) {
+                    return data.animateUpdates === true;
+                  }
+                },
+                animationEasing: {
+                  ref: 'animationEasing',
+                  type: 'string',
+                  component: 'dropdown',
+                  label: 'Animatie easing',
+                  options: [{
+                    value: 'linear',
+                    label: 'Lineair'
+                  }, {
+                    value: 'easeIn',
+                    label: 'Ease In'
+                  }, {
+                    value: 'easeOut',
+                    label: 'Ease Out'
+                  }, {
+                    value: 'easeInOut',
+                    label: 'Ease In/Out'
+                  }],
+                  defaultValue: 'linear',
+                  show: function(data) {
+                    return data.animateUpdates === true;
+                  }
+                },
+                animationSmoothness: {
+                  ref: 'animationSmoothness',
+                  type: 'number',
+                  label: 'Animatie vloeiendheid',
+                  defaultValue: 1,
+                  min: 0.5,
+                  max: 3,
+                  step: 0.5,
                   show: function(data) {
                     return data.animateUpdates === true;
                   }
