@@ -14,7 +14,9 @@ LiveTrainExtension/
 ├── propertyPanel.js              # Configuratie van het eigenschappen paneel
 ├── api/
 │   ├── trainDataService.js       # Service voor het ophalen van treingegevens
-│   └── apiConfig.js              # API configuratie en endpoints
+│   ├── apiConfig.js              # API configuratie en endpoints
+│   ├── apiKey.js                 # Persoonlijke API Key (uitgesloten van versiecontrole)
+│   └── apiKey.template.js        # Template voor het maken van apiKey.js
 ├── ui/
 │   ├── mapRenderer.js            # Verantwoordelijk voor het weergeven van de kaart
 │   └── trainVisualizer.js        # Functionaliteit voor het visualiseren van treinen op de kaart
@@ -151,7 +153,7 @@ LiveTrainExtension/
     * Afhankelijkheden: Geen
 
 ### 3.6 apiConfig.js
-* **Status**: Voltooid - Bijgewerkt voor correcte NS-API configuratie
+* **Status**: Voltooid - Bijgewerkt voor het gebruik van externe apiKey.js file voor API key beheer
 * **Bestandsnaam**: api/apiConfig.js
 * **Functionaliteit**: Configuratie voor API-endpoints en authenticatie
 * **Belangrijkste functies**: 
@@ -160,13 +162,39 @@ LiveTrainExtension/
       * endpoint (string): Relatieve endpoint path
     * Return waarde: Volledige API URL
     * Afhankelijkheden: Geen
+  * `loadApiKey(environment)`: 
+    * Parameters: 
+      * environment (string, optional): Omgeving ('dev' of 'prod')
+    * Return waarde: Geen
+    * Afhankelijkheden: apiKey.js
   * `configure(options)`: 
     * Parameters: 
       * options (Object): Configuratie opties
     * Return waarde: Geen
     * Afhankelijkheden: Geen
+  * `validate()`: 
+    * Parameters: Geen
+    * Return waarde: Object met validatiestatus en eventuele foutmeldingen
+    * Afhankelijkheden: Geen
 
-### 3.7 mapRenderer.js
+### 3.7 apiKey.js
+* **Status**: Voltooid - Nieuwe module voor veilig beheer van API sleutels
+* **Bestandsnaam**: api/apiKey.js
+* **Functionaliteit**: Bevat de API sleutel voor de NS API, gescheiden van de hoofdcode om veiligheidsredenen
+* **Belangrijkste functies**: 
+  * `getApiKey(environment)`: 
+    * Parameters: 
+      * environment (string, optional): Omgeving ('dev' of 'prod')
+    * Return waarde: De API sleutel string
+    * Afhankelijkheden: Geen
+
+### 3.8 apiKey.template.js
+* **Status**: Voltooid - Template voor het maken van apiKey.js
+* **Bestandsnaam**: api/apiKey.template.js
+* **Functionaliteit**: Dient als voorbeeld voor gebruikers om hun eigen apiKey.js te maken
+* **Belangrijkste functies**: Identiek aan apiKey.js, maar met voorbeeld waardes
+
+### 3.9 mapRenderer.js
 * **Status**: Voltooid
 * **Bestandsnaam**: ui/mapRenderer.js
 * **Functionaliteit**: Verantwoordelijk voor het initialiseren en renderen van de kaart
@@ -208,7 +236,7 @@ LiveTrainExtension/
     * Return waarde: Geen
     * Afhankelijkheden: Leaflet bibliotheek
 
-### 3.8 trainVisualizer.js
+### 3.10 trainVisualizer.js
 * **Status**: Voltooid - Uitgebreid met animatie en update-indicator functionaliteit
 * **Bestandsnaam**: ui/trainVisualizer.js
 * **Functionaliteit**: Verantwoordelijk voor het visualiseren van treinen op de kaart
@@ -275,13 +303,13 @@ LiveTrainExtension/
     * Return waarde: Geen
     * Afhankelijkheden: Geen
 
-### 3.9 style.css
+### 3.11 style.css
 * **Status**: Voltooid - Bijgewerkt met styling voor dynamische updates, animaties en toggle controls
 * **Bestandsnaam**: lib/css/style.css
 * **Functionaliteit**: Stylesheet voor de extensie
 * **Belangrijkste functies**: N.v.t. (CSS bestand)
 
-### 3.10 qlik-style.js
+### 3.12 qlik-style.js
 * **Status**: Voltooid
 * **Bestandsnaam**: lib/js/qlik-style.js
 * **Functionaliteit**: Hulpprogramma voor integratie met Qlik stijlen
@@ -304,12 +332,15 @@ Voltooide modules:
 - initialProperties.js (uitgebreid met standaardwaarden voor dynamische updates)
 - propertyPanel.js (uitgebreid met configuratie-opties voor dynamische updates en animatie)
 - api/trainDataService.js (bijgewerkt voor integratie met NS-API en ReferenceError opgelost)
-- api/apiConfig.js (bijgewerkt voor correcte NS-API configuratie)
+- api/apiConfig.js (bijgewerkt voor het laden van API sleutels uit separate file)
+- api/apiKey.js (nieuw: aparte module voor veilig beheer van API sleutels)
+- api/apiKey.template.js (nieuw: template voor het maken van apiKey.js)
 - ui/mapRenderer.js
 - ui/trainVisualizer.js (uitgebreid met animatie en update-indicator functionaliteit)
 - lib/css/style.css (bijgewerkt met styling voor dynamische updates, animaties en toggle controls)
 - lib/js/qlik-style.js
-- README.md (bijgewerkt met duidelijke instructies voor NS-API configuratie)
+- README.md (bijgewerkt met duidelijke instructies voor NS-API configuratie en apiKey.js gebruik)
+- .gitignore (toegevoegd om apiKey.js uit te sluiten van versiecontrole)
 
 Alle modules zijn nu volledig geïmplementeerd, geïntegreerd en geoptimaliseerd. De belangrijke bugs en functionele fouten in LiveTrainExtension.js zijn opgelost, waaronder:
 - Memory leaks door meervoudige event handlers
@@ -337,6 +368,7 @@ De extensie beschikt nu over alle gewenste functionaliteit, inclusief real-time 
 9. ✅ Bugfix voor kaartweergaveproblemen - opgelost
 10. ✅ Bugfix voor ReferenceError in trainDataService.js - opgelost
 11. ✅ Optimalisatie van LiveTrainExtension.js met functieonele verbeteringen (memory leaks, XSS-beveiliging, etc.)
+12. ✅ Implementatie van aparte apiKey.js file voor veilig API key beheer
 
 Alle must-have functionaliteiten zijn nu geïmplementeerd, getest en geoptimaliseerd. De extensie is volledig functioneel, veilig en efficiënt voor gebruik in productieomgevingen.
 
@@ -351,5 +383,6 @@ Alle must-have functionaliteiten zijn nu geïmplementeerd, getest en geoptimalis
 8. ✅ Prestatieoptimalisaties voor grote hoeveelheden treingegevens (geïmplementeerd via Set-based filtering)
 9. Beter gebruik van namespaced events voor opruiming
 10. ✅ Verbeterde foutafhandeling en robuustheid (geïmplementeerd)
+11. ✅ Veilige API key opslag gescheiden van de hoofdcode (geïmplementeerd)
 
 Alle essentiële functionaliteiten en optimalisaties zijn afgerond. De extensie biedt gebruikers een interactieve, veilige en informatieve manier om treinen in real-time te volgen. De resterende nice-to-have features kunnen in toekomstige iteraties worden toegevoegd om de extensie verder te verbeteren.
